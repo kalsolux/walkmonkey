@@ -3,65 +3,239 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>walkmonkey</title>
+  
+  <!-- Favicon & OpenGraph Metadata for Discord Previews -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E">
+  <meta property="og:title" content="walkmonkey">
+  <meta property="og:description" content="Community music crate and release archive.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#09090b">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     img { -webkit-user-drag: none; user-select: none; }
     .card-entry {
       content-visibility: auto;
-      contain-intrinsic-size: 260px;
+      contain-intrinsic-size: 270px;
     }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--sb-track, #09090b); }
+    ::-webkit-scrollbar-thumb { background: var(--sb-thumb, #27272a); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--sb-hover, #3f3f46); }
+
+    /* Light Mode Overrides */
+    html.light {
+      --sb-track: #f4f4f5;
+      --sb-thumb: #d4d4d8;
+      --sb-hover: #a1a1aa;
+    }
+    html.light body {
+      background-color: #fafafa;
+      color: #09090b;
+    }
+    html.light .bg-zinc-950 { background-color: #fafafa; }
+    html.light .bg-zinc-900 { background-color: #ffffff; }
+    html.light .bg-zinc-900\/60 { background-color: #ffffff; }
+    html.light .bg-zinc-800 { background-color: #e4e4e7; }
+    html.light .hover\:bg-zinc-800:hover { background-color: #f4f4f5; }
+    html.light .border-zinc-800,
+    html.light .border-zinc-800\/80,
+    html.light .border-zinc-800\/60 { border-color: #e4e4e7; }
+    html.light .hover\:border-zinc-600:hover,
+    html.light .hover\:border-zinc-700:hover { border-color: #a1a1aa; }
+    html.light .text-zinc-100,
+    html.light .text-zinc-200,
+    html.light .text-white { color: #09090b; }
+    html.light .text-zinc-300 { color: #18181b; }
+    html.light .text-zinc-400 { color: #52525b; }
+    html.light .text-zinc-500 { color: #71717a; }
+    html.light .placeholder-zinc-500::placeholder { color: #a1a1aa; }
+    html.light .hover\:text-white:hover,
+    html.light .hover\:text-zinc-200:hover,
+    html.light .hover\:text-zinc-300:hover,
+    html.light .group-hover\:text-white:hover { color: #000000; }
+    html.light .card-entry {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    }
+    html.light #settingsDropdown,
+    html.light #sortDropdown,
+    html.light #shortcutsModal > div,
+    html.light #toast {
+      background-color: #ffffff;
+      border-color: #e4e4e7;
+      color: #09090b;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    }
+    html.light #shortcutsModal kbd {
+      background-color: #f4f4f5;
+      border-color: #e4e4e7;
+      color: #18181b;
+    }
+    html.light #toast span { color: #09090b; }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased font-sans selection:bg-zinc-800 selection:text-white">
+<body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased font-sans selection:bg-zinc-800 selection:text-white flex flex-col justify-between">
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+  <!-- Main Container -->
+  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-1">
     
-    <!-- Top Bar -->
+    <!-- Top Header Bar -->
     <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
-      <div class="flex items-center h-9">
+      <div class="flex items-center">
         <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl leading-none m-0 p-0">
-          walkmonkey
+          <a 
+            id="logoEasterEggBtn"
+            href="https://youtu.be/V4IuLJFEzxY" 
+            class="hover:opacity-80 transition-opacity cursor-pointer inline-block"
+          >
+            walkmonkey
+          </a>
         </h1>
       </div>
 
-      <!-- Controls & Filtering (Unified h-9 baseline) -->
+      <!-- Controls & Filtering (Arranged: Category Filter -> Search -> Sort -> View Mode -> Settings) -->
       <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
-        <!-- Live Search -->
+        <!-- 1. Content Filter: Albums / Tracks -->
+        <div class="inline-flex h-9 items-center p-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs box-border">
+          <button class="filter-btn h-full px-2.5 rounded flex items-center justify-center bg-zinc-800 text-white font-medium transition leading-none" data-type="album" title="Albums" aria-label="Albums">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" stroke-width="2"></circle>
+              <circle cx="12" cy="12" r="2.5" stroke-width="2"></circle>
+            </svg>
+          </button>
+          <button class="filter-btn h-full px-2.5 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" data-type="song" title="Tracks" aria-label="Tracks">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 2. Live Search -->
         <div class="relative flex-1 sm:w-64 sm:flex-initial">
+          <span class="absolute left-2.5 inset-y-0 my-auto h-4 w-4 flex items-center justify-center text-zinc-500 pointer-events-none">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </span>
           <input 
             id="searchInput" 
             type="text" 
-            placeholder="Search album, artist, curator..." 
+            placeholder="title, artist, curator..." 
             autocomplete="off"
             aria-label="Search submissions"
-            class="w-full h-9 bg-zinc-900 border border-zinc-800 text-xs rounded-lg pl-3 pr-8 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition box-border"
+            class="w-full h-9 bg-zinc-900 border border-zinc-800 text-xs rounded-lg pl-8 pr-8 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition box-border"
           >
-          <button id="clearSearch" aria-label="Clear search" class="hidden absolute right-2.5 inset-y-0 my-auto h-4 w-4 flex items-center justify-center text-zinc-500 hover:text-zinc-300 text-xs leading-none">✕</button>
+          <button 
+            id="clearSearch" 
+            aria-label="Clear search" 
+            class="hidden absolute right-2.5 inset-y-0 my-auto h-4 w-4 flex items-center justify-center text-zinc-500 hover:text-zinc-300 text-xs leading-none"
+          >
+            ✕
+          </button>
         </div>
 
-        <!-- Filter Segmented Control -->
+        <!-- 3. Sort Options (SVG Button with Popover) -->
+        <div class="relative">
+          <button 
+            id="sortMenuBtn" 
+            aria-label="Sort options" 
+            class="h-9 w-9 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white rounded-lg transition flex items-center justify-center box-border" 
+            title="Sort"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+            </svg>
+          </button>
+          
+          <div id="sortDropdown" class="hidden absolute right-0 mt-1.5 w-48 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1.5 z-40 text-xs">
+            <div class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Sort By</div>
+            <button data-sort="newest" class="sort-option w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition flex items-center justify-between cursor-pointer">
+              <span>Newest Shared</span>
+              <span class="sort-check text-zinc-400">✓</span>
+            </button>
+            <button data-sort="oldest" class="sort-option w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition flex items-center justify-between cursor-pointer">
+              <span>Oldest Shared</span>
+              <span class="sort-check text-zinc-400 hidden">✓</span>
+            </button>
+            <button data-sort="sharer" class="sort-option w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition flex items-center justify-between cursor-pointer">
+              <span>Shared By (A–Z)</span>
+              <span class="sort-check text-zinc-400 hidden">✓</span>
+            </button>
+            <button data-sort="artist" class="sort-option w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition flex items-center justify-between cursor-pointer">
+              <span>Artist (A–Z)</span>
+              <span class="sort-check text-zinc-400 hidden">✓</span>
+            </button>
+            <button data-sort="title" class="sort-option w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition flex items-center justify-between cursor-pointer">
+              <span>Title (A–Z)</span>
+              <span class="sort-check text-zinc-400 hidden">✓</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. View Mode Switcher (Grid / Covers Only / List) -->
         <div class="inline-flex h-9 items-center p-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs box-border">
-          <button class="filter-btn h-full px-3 rounded flex items-center justify-center bg-zinc-800 text-white font-medium transition leading-none" data-type="all">All</button>
-          <button class="filter-btn h-full px-3 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" data-type="album">Albums</button>
-          <button class="filter-btn h-full px-3 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" data-type="song">Tracks</button>
+          <button id="viewGridBtn" aria-label="Grid view" class="h-full px-2.5 rounded flex items-center justify-center bg-zinc-800 text-white transition leading-none" title="Standard Grid">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          </button>
+          <button id="viewCoversBtn" aria-label="Covers only view" class="h-full px-2.5 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" title="Cover Wall (No Text)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          </button>
+          <button id="viewListBtn" aria-label="List view" class="h-full px-2.5 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" title="Compact List View">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
         </div>
 
-        <!-- Sort Select -->
-        <select 
-          id="sortSelect" 
-          class="h-9 bg-zinc-900 border border-zinc-800 text-xs rounded-lg px-3 text-zinc-300 focus:outline-none focus:border-zinc-500 transition cursor-pointer box-border"
-        >
-          <option value="newest">Recently Added</option>
-          <option value="oldest">Oldest First</option>
-          <option value="artist">Artist (A–Z)</option>
-          <option value="title">Title (A–Z)</option>
-        </select>
+        <!-- 5. Settings Dropdown (Theme & Export) -->
+        <div class="relative">
+          <button 
+            id="settingsMenuBtn" 
+            aria-label="Settings" 
+            class="h-9 w-9 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white rounded-lg transition flex items-center justify-center box-border" 
+            title="Settings"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </button>
+          
+          <div id="settingsDropdown" class="hidden absolute right-0 mt-1.5 w-52 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-2 z-40 text-xs">
+            <!-- Theme Toggle -->
+            <div class="px-3 py-1.5 flex items-center justify-between border-b border-zinc-800/80 mb-1">
+              <span class="text-zinc-400 font-medium text-[11px] uppercase tracking-wider">Theme</span>
+              <button 
+                id="themeToggleBtn" 
+                type="button" 
+                class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition text-[11px] cursor-pointer"
+              >
+                <svg id="themeMoonIcon" class="w-3.5 h-3.5 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                <svg id="themeSunIcon" class="w-3.5 h-3.5 text-zinc-300 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <span id="themeLabel">Dark</span>
+              </button>
+            </div>
+
+            <!-- Export Options -->
+            <div class="px-3 pt-1.5 pb-1 text-[11px] uppercase tracking-wider text-zinc-500 font-medium">Export</div>
+            <button data-export="plaintext" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition cursor-pointer">Copy List (Artist - Title)</button>
+            <button data-export="links" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition cursor-pointer">Copy Smartlinks</button>
+            <button data-export="csv" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition cursor-pointer">Download CSV</button>
+
+            <!-- Keyboard Shortcuts Button -->
+            <div class="border-t border-zinc-800/80 mt-1.5 pt-1">
+              <button id="shortcutsBtn" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition cursor-pointer flex items-center justify-between">
+                <span>Keyboard Shortcuts</span>
+                <span class="text-[10px] text-zinc-500 font-mono">?</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
-    <!-- Grid Container -->
+    <!-- Content Feed Container -->
     <main>
       <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4">
         <!-- Loading skeletons -->
@@ -72,8 +246,85 @@
         <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
         <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
       </div>
+
+      <!-- Pagination / Load More Sentinel -->
+      <div id="loadMoreContainer" class="mt-8 text-center hidden">
+        <button id="loadMoreBtn" class="px-4 py-2 text-xs bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg transition text-zinc-300">
+          Load More Records
+        </button>
+      </div>
     </main>
 
+  </div>
+
+  <!-- Keyboard Shortcuts Modal -->
+  <div id="shortcutsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl max-w-sm w-full p-5 text-zinc-200">
+      <div class="flex items-center justify-between pb-3 border-b border-zinc-800/80">
+        <h3 class="font-semibold text-xs text-white uppercase tracking-wider">Keyboard Shortcuts</h3>
+        <button id="closeShortcutsBtn" aria-label="Close shortcuts modal" class="text-zinc-500 hover:text-zinc-300 transition text-xs leading-none p-1">✕</button>
+      </div>
+      <div class="mt-4 space-y-2.5 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="text-zinc-400">Focus search bar</span>
+          <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">/</kbd>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-zinc-400">Clear search / Close panels</span>
+          <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">Esc</kbd>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-zinc-400">Next record</span>
+          <div class="flex items-center gap-1">
+            <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">j</kbd>
+            <span class="text-zinc-600">or</span>
+            <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">↓</kbd>
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-zinc-400">Previous record</span>
+          <div class="flex items-center gap-1">
+            <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">k</kbd>
+            <span class="text-zinc-600">or</span>
+            <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">↑</kbd>
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-zinc-400">Open highlighted record</span>
+          <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">Enter</kbd>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Easter Egg Modal -->
+  <div id="videoModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 hidden">
+    <button id="closeVideoBtn" aria-label="Close video modal" class="absolute top-5 right-5 text-zinc-400 hover:text-white transition p-2 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 rounded-full z-10 text-xs leading-none">
+      ✕
+    </button>
+    <div class="w-full max-w-4xl aspect-video relative rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 bg-black flex items-center justify-center">
+      <iframe 
+        id="videoIframe" 
+        class="w-full h-full" 
+        src="" 
+        title="walkmonkey" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+        allowfullscreen 
+        referrerpolicy="strict-origin-when-cross-origin"
+      ></iframe>
+      <div id="fileProtocolNotice" class="hidden absolute inset-0 bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-zinc-300">
+        <p class="text-sm font-medium mb-1.5 text-zinc-200">YouTube restricts embedded playback when opening files directly from disk (<code class="text-zinc-300 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded text-xs">file://</code>).</p>
+        <p class="text-xs text-zinc-500 max-w-md mb-4">Once hosted on a web server or run locally (e.g. <code class="text-zinc-400 bg-zinc-900 px-1 py-0.5 rounded">npx serve</code>), this plays directly in the modal!</p>
+        <a href="https://youtu.be/V4IuLJFEzxY" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs rounded-lg transition inline-flex items-center gap-1.5">
+          Watch on YouTube ↗
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-zinc-900 border border-zinc-700/80 text-white text-xs px-3.5 py-2 rounded-lg shadow-xl translate-y-12 opacity-0 transition-all duration-200 pointer-events-none z-50 flex items-center gap-2">
+    <span>✓ Link copied to clipboard</span>
   </div>
 
   <script>
@@ -84,12 +335,45 @@
     const SUPABASE_ANON_KEY = "sb_publishable_3dboqX10LLamDGWhpEZjYQ_l3Ca0Rfd";
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let allItems = [];
-    let currentFilter = "all";
-    let currentSort = "newest";
-    let searchDebounceTimer = null;
+    // Self-contained, offline-resilient inline SVG fallback for missing or broken artwork
+    const FALLBACK_ART = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2352525b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='100%25' height='100%25' fill='%2318181b'/%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Ccircle cx='12' cy='12' r='2.5'/%3E%3C/svg%3E";
 
-    // Fast HTML escaping helper to prevent injection
+    let allItems = [];
+    let currentFilter = "album";
+    let currentSort = "newest";
+    let currentView = "grid";
+    let activeIndex = -1;
+    let searchDebounceTimer = null;
+    let toastTimer = null;
+    let renderedCount = 0;
+    const PAGE_CHUNK = 1000;
+
+    // Normalizes item fields once on ingestion for O(1) searches and fast numeric sorting
+    function normalizeItem(item) {
+      if (!item) return null;
+      if (item.entity_type === "track") item.entity_type = "song";
+      if (!item.entity_type && item.canonical_id) {
+        item.entity_type = item.canonical_id.includes(":track:") ? "song" : "album";
+      }
+      item._search = `${item.title || ""} ${item.artist || ""} ${item.submitted_by_name || ""}`.toLowerCase();
+      item._ts = item.created_at ? Date.parse(item.created_at) || 0 : 0;
+      item._title = (item.title || "").toLowerCase();
+      item._artist = (item.artist || "").toLowerCase();
+      item._sharer = (item.submitted_by_name || "").toLowerCase();
+      return item;
+    }
+
+    // Strict URL sanitizer ensuring attributes cannot be hijacked with javascript: URI schemes
+    function sanitizeUrl(str) {
+      if (!str) return "#";
+      const trimmed = String(str).trim();
+      if (/^https?:\/\//i.test(trimmed)) {
+        return escapeHtml(trimmed);
+      }
+      return "#";
+    }
+
+    // HTML entity escaping helper
     function escapeHtml(str) {
       if (!str) return "";
       return String(str)
@@ -100,34 +384,228 @@
         .replace(/'/g, "&#039;");
     }
 
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      if (msg) toast.firstElementChild.innerText = msg;
+      toast.classList.remove("translate-y-12", "opacity-0");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add("translate-y-12", "opacity-0");
+      }, 2000);
+    }
+
+    // Safe clipboard copy helper that works reliably inside sandboxed iframes
+    function copyText(text) {
+      if (!text) return;
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      } catch (err) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(() => {});
+        }
+      }
+    }
+
+    // =========================================================================
+    // URL STATE MANAGEMENT
+    // =========================================================================
+    function syncStateToURL() {
+      try {
+        if (window.location.protocol === "blob:" || window.location.origin === "null") return;
+
+        const params = new URLSearchParams();
+        if (currentFilter !== "album") params.set("type", currentFilter);
+        if (currentSort !== "newest") params.set("sort", currentSort);
+        if (currentView !== "grid") params.set("view", currentView);
+
+        const q = document.getElementById("searchInput").value.trim();
+        if (q) params.set("q", q);
+
+        const queryStr = params.toString();
+        const newUrl = queryStr ? `${window.location.pathname}?${queryStr}` : window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+      } catch (err) {}
+    }
+
+    function readStateFromURL() {
+      try {
+        if (window.location.protocol === "blob:" || window.location.origin === "null") return;
+        if (!window.location.search) return;
+
+        const params = new URLSearchParams(window.location.search);
+        if (params.has("type") && ["album", "song"].includes(params.get("type"))) {
+          currentFilter = params.get("type");
+          document.querySelectorAll(".filter-btn").forEach(btn => {
+            const isActive = btn.dataset.type === currentFilter;
+            btn.classList.toggle("bg-zinc-800", isActive);
+            btn.classList.toggle("text-white", isActive);
+            btn.classList.toggle("font-medium", isActive);
+            btn.classList.toggle("text-zinc-400", !isActive);
+          });
+        }
+
+        if (params.has("sort")) {
+          const s = params.get("sort");
+          if (["newest", "oldest", "artist", "title", "sharer"].includes(s)) {
+            currentSort = s;
+            updateSortUI();
+          }
+        }
+
+        if (params.has("view") && ["grid", "covers", "list"].includes(params.get("view"))) {
+          currentView = params.get("view");
+          updateViewButtons();
+        }
+
+        if (params.has("q")) {
+          const qVal = params.get("q");
+          document.getElementById("searchInput").value = qVal;
+          document.getElementById("clearSearch").classList.toggle("hidden", qVal.trim().length === 0);
+        }
+      } catch (err) {}
+    }
+
+    function updateSortUI() {
+      document.querySelectorAll(".sort-option").forEach(btn => {
+        const isMatch = btn.dataset.sort === currentSort;
+        const check = btn.querySelector(".sort-check");
+        if (check) check.classList.toggle("hidden", !isMatch);
+        btn.classList.toggle("text-white", isMatch);
+        btn.classList.toggle("font-medium", isMatch);
+        btn.classList.toggle("text-zinc-300", !isMatch);
+      });
+    }
+
+    function updateViewButtons() {
+      const gBtn = document.getElementById("viewGridBtn");
+      const cBtn = document.getElementById("viewCoversBtn");
+      const lBtn = document.getElementById("viewListBtn");
+
+      [
+        { btn: gBtn, active: currentView === "grid" },
+        { btn: cBtn, active: currentView === "covers" },
+        { btn: lBtn, active: currentView === "list" }
+      ].forEach(({ btn, active }) => {
+        if (!btn) return;
+        btn.classList.toggle("bg-zinc-800", active);
+        btn.classList.toggle("text-white", active);
+        btn.classList.toggle("text-zinc-400", !active);
+      });
+    }
+
+    function setCuratorSearch(curator) {
+      const searchInput = document.getElementById("searchInput");
+      searchInput.value = curator;
+      activeIndex = -1;
+      syncStateToURL();
+      render(true);
+    }
+
+    // =========================================================================
+    // EXPORT FUNCTIONS
+    // =========================================================================
+    function exportData(type) {
+      const dropdown = document.getElementById("settingsDropdown");
+      if (dropdown) dropdown.classList.add("hidden");
+
+      const items = getProcessedItems();
+      if (!items || items.length === 0) {
+        showToast("⚠ No records to export");
+        return;
+      }
+
+      if (type === "plaintext") {
+        const text = items.map(i => `${i.artist || "Unknown"} - ${i.title || "Untitled"}`).join("\n");
+        copyText(text);
+        showToast(`✓ Copied ${items.length} records as text`);
+      } else if (type === "links") {
+        const links = items.map(i => i.smartlink_url || i.original_url).join("\n");
+        copyText(links);
+        showToast(`✓ Copied ${items.length} smartlinks`);
+      } else if (type === "csv") {
+        const headers = ["Title", "Artist", "Type", "Curator", "URL", "Date"];
+        const rows = items.map(i => [
+          `"${(i.title || "").replace(/"/g, '""')}"`,
+          `"${(i.artist || "").replace(/"/g, '""')}"`,
+          `"${i.entity_type || ""}"`,
+          `"${(i.submitted_by_name || "").replace(/"/g, '""')}"`,
+          `"${i.smartlink_url || i.original_url || ""}"`,
+          `"${i.created_at || ""}"`
+        ]);
+        const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `walkmonkey-${currentFilter}-${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast(`✓ CSV downloaded (${items.length} records)`);
+      }
+    }
+
     // =========================================================================
     // DATA FETCHING & REALTIME
     // =========================================================================
     async function loadData() {
-      const { data, error } = await client
-        .from("submissions")
-        .select("*")
-        .order("created_at", { ascending: false });
+      try {
+        let records = [];
+        let offset = 0;
+        const batchSize = 1000;
+        let keepFetching = true;
 
-      if (error) {
-        console.error("[Supabase Error]", error);
-        return;
+        while (keepFetching) {
+          const { data, error } = await client
+            .from("submissions")
+            .select("id, canonical_id, title, artist, cover_url, smartlink_url, original_url, entity_type, submitted_by_name, created_at")
+            .order("created_at", { ascending: false })
+            .range(offset, offset + batchSize - 1);
+
+          if (error) {
+            console.error("[Supabase Fetch Error]", error);
+            break;
+          }
+
+          if (data && data.length > 0) {
+            for (let i = 0; i < data.length; i++) {
+              normalizeItem(data[i]);
+            }
+            records = records.concat(data);
+            offset += batchSize;
+            if (data.length < batchSize) keepFetching = false;
+          } else {
+            keepFetching = false;
+          }
+        }
+
+        allItems = records;
+        render(true);
+      } catch (err) {
+        console.error("[Fatal Data Load]", err);
       }
-
-      allItems = data || [];
-      render();
     }
 
     function subscribeRealtime() {
       client
-        .channel("submissions-live")
+        .channel("submissions-realtime")
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "submissions" },
           (payload) => {
             if (!allItems.some(item => item.id === payload.new.id)) {
-              allItems.unshift(payload.new);
-              render();
+              const wasShowingAll = renderedCount >= allItems.length;
+              allItems.unshift(normalizeItem(payload.new));
+              if (wasShowingAll) renderedCount = allItems.length;
+              render(false);
             }
           }
         )
@@ -135,16 +613,21 @@
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "submissions" },
           (payload) => {
-            allItems = allItems.map(item => item.id === payload.new.id ? payload.new : item);
-            render();
+            const updated = normalizeItem(payload.new);
+            allItems = allItems.map(item => item.id === updated.id ? updated : item);
+            render(false);
           }
         )
         .on(
           "postgres_changes",
           { event: "DELETE", schema: "public", table: "submissions" },
           (payload) => {
+            const wasShowingAll = renderedCount >= allItems.length;
             allItems = allItems.filter(item => item.id !== payload.old.id);
-            render();
+            if (wasShowingAll || renderedCount > allItems.length) {
+              renderedCount = allItems.length;
+            }
+            render(false);
           }
         )
         .subscribe();
@@ -153,64 +636,43 @@
     // =========================================================================
     // RENDERING & INTERACTION
     // =========================================================================
-    function render() {
-      const query = document.getElementById("searchInput").value.toLowerCase().trim();
-      const container = document.getElementById("grid");
-      const clearBtn = document.getElementById("clearSearch");
+    function getProcessedItems() {
+      const rawQuery = document.getElementById("searchInput").value.toLowerCase().trim();
+      const terms = rawQuery ? rawQuery.split(/\s+/).filter(Boolean) : [];
 
-      clearBtn.classList.toggle("hidden", query.length === 0);
-
-      // Filtering
-      const processed = allItems.filter(item => {
-        const matchesType = currentFilter === "all" || item.entity_type === currentFilter;
-        if (!matchesType) return false;
-        if (!query) return true;
-
-        return (
-          (item.title && item.title.toLowerCase().includes(query)) ||
-          (item.artist && item.artist.toLowerCase().includes(query)) ||
-          (item.submitted_by_name && item.submitted_by_name.toLowerCase().includes(query))
-        );
+      const filtered = allItems.filter(item => {
+        if (currentFilter === "album" && item.entity_type !== "album") return false;
+        if (currentFilter === "song" && item.entity_type !== "song" && item.entity_type !== "track") return false;
+        if (terms.length > 0 && !terms.every(term => item._search.includes(term))) return false;
+        return true;
       });
 
-      // Sorting
-      processed.sort((a, b) => {
-        if (currentSort === "newest") return (b.id || 0) - (a.id || 0);
-        if (currentSort === "oldest") return (a.id || 0) - (b.id || 0);
-        if (currentSort === "artist") return (a.artist || "").localeCompare(b.artist || "");
-        if (currentSort === "title") return (a.title || "").localeCompare(b.title || "");
+      filtered.sort((a, b) => {
+        if (currentSort === "newest") return (b._ts - a._ts) || ((b.id || 0) - (a.id || 0));
+        if (currentSort === "oldest") return (a._ts - b._ts) || ((a.id || 0) - (b.id || 0));
+        if (currentSort === "artist") return a._artist.localeCompare(b._artist) || (b._ts - a._ts);
+        if (currentSort === "title") return a._title.localeCompare(b._title) || (b._ts - a._ts);
+        if (currentSort === "sharer") return a._sharer.localeCompare(b._sharer) || (b._ts - a._ts);
         return 0;
       });
 
-      if (processed.length === 0) {
-        container.innerHTML = `
-          <div class="col-span-full py-20 text-center text-zinc-500 text-xs">
-            No entries found.
-          </div>
-        `;
-        return;
-      }
+      return filtered;
+    }
 
-      container.innerHTML = processed.map(item => {
-        const isAlbum = item.entity_type === "album";
-        const badgeColor = isAlbum 
-          ? "bg-amber-400/10 text-amber-300 border-amber-400/20" 
-          : "bg-sky-400/10 text-sky-300 border-sky-400/20";
-        
-        const titleSafe = escapeHtml(item.title);
-        const artistSafe = escapeHtml(item.artist);
-        const submitterSafe = escapeHtml(item.submitted_by_name);
-        const urlSafe = escapeHtml(item.smartlink_url || item.original_url);
-        const coverSafe = escapeHtml(item.cover_url);
+    function createCardHTML(item, index) {
+      const titleSafe = escapeHtml(item.title || "Untitled");
+      const artistSafe = escapeHtml(item.artist || "Unknown Artist");
+      const submitterSafe = escapeHtml(item.submitted_by_name || "Community");
+      const urlSafe = sanitizeUrl(item.smartlink_url || item.original_url);
+      const coverSafe = sanitizeUrl(item.cover_url);
+      const isSelected = index === activeIndex;
 
-        return `
-          <a 
-            href="${urlSafe}" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            class="card-entry group bg-zinc-900/60 rounded-lg overflow-hidden border border-zinc-800/80 hover:border-zinc-600 transition-colors flex flex-col justify-between"
-          >
-            <!-- Artwork Wrapper -->
+      return `
+        <div 
+          data-index="${index}" 
+          class="card-entry group bg-zinc-900/60 rounded-lg overflow-hidden border ${isSelected ? "border-zinc-400 ring-2 ring-zinc-500/50" : "border-zinc-800/80 hover:border-zinc-600"} transition-all flex flex-col justify-between relative"
+        >
+          <a href="${urlSafe}" target="_blank" rel="noopener noreferrer" class="block flex-1">
             <div class="aspect-square w-full bg-zinc-900 relative overflow-hidden flex-shrink-0">
               <img 
                 src="${coverSafe}" 
@@ -218,41 +680,214 @@
                 loading="lazy" 
                 decoding="async"
                 class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200 ease-out"
-                onerror="this.src='https://placehold.co/400x400/18181b/71717a?text=No+Cover';"
+                onerror="this.onerror=null;this.src='${FALLBACK_ART}';"
               >
-              <!-- Type Badge -->
-              <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider border backdrop-blur-sm ${badgeColor}">
-                ${escapeHtml(item.entity_type)}
-              </span>
             </div>
-
-            <!-- Metadata Details -->
-            <div class="p-2.5 flex-1 flex flex-col justify-between gap-2.5">
-              <div class="min-w-0">
-                <h3 class="font-medium text-xs truncate text-zinc-200 group-hover:text-white" title="${titleSafe}">
-                  ${titleSafe}
-                </h3>
-                <p class="text-[11px] text-zinc-400 truncate mt-0.5" title="${artistSafe}">
-                  ${artistSafe}
-                </p>
-              </div>
-
-              <!-- Submitter Footer -->
-              <div class="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-zinc-500 min-w-0">
-                <span class="truncate pr-1.5" title="Submitted by ${submitterSafe}">
-                  via @${submitterSafe}
-                </span>
-                <span class="text-zinc-500 group-hover:text-zinc-300 flex-shrink-0">↗</span>
-              </div>
+            <div class="p-2.5">
+              <h3 class="font-medium text-xs truncate text-zinc-200 group-hover:text-white" title="${titleSafe}">${titleSafe}</h3>
+              <p class="text-[11px] text-zinc-400 truncate mt-0.5" title="${artistSafe}">${artistSafe}</p>
             </div>
           </a>
+          <div class="px-2.5 pb-2 pt-1 border-t border-zinc-800/60 flex items-center justify-between text-[10px] text-zinc-500">
+            <button 
+              type="button" 
+              data-action="curator" 
+              data-curator="${submitterSafe}"
+              class="truncate pr-1 hover:text-zinc-300 hover:underline transition text-left" 
+              title="Filter by @${submitterSafe}"
+            >
+              @${submitterSafe}
+            </button>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <button 
+                type="button" 
+                aria-label="Copy smartlink" 
+                data-action="copy" 
+                data-url="${urlSafe}"
+                class="hover:text-zinc-200 transition p-1 -m-1"
+                title="Copy Link"
+              >
+                ⎘
+              </button>
+              <a href="${urlSafe}" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-zinc-300" title="Open stream link">↗</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function createListRowHTML(item, index) {
+      const titleSafe = escapeHtml(item.title || "Untitled");
+      const artistSafe = escapeHtml(item.artist || "Unknown Artist");
+      const submitterSafe = escapeHtml(item.submitted_by_name || "Community");
+      const urlSafe = sanitizeUrl(item.smartlink_url || item.original_url);
+      const coverSafe = sanitizeUrl(item.cover_url);
+      const isSelected = index === activeIndex;
+
+      return `
+        <div 
+          data-index="${index}" 
+          class="group flex items-center justify-between gap-3 p-2 bg-zinc-900/60 rounded-lg border ${isSelected ? "border-zinc-400 ring-1 ring-zinc-500/50" : "border-zinc-800/80 hover:border-zinc-700"} transition-all text-xs"
+        >
+          <div class="flex items-center gap-3 min-w-0 flex-1">
+            <img 
+              src="${coverSafe}" 
+              alt="${titleSafe}" 
+              loading="lazy" 
+              decoding="async"
+              class="h-9 w-9 rounded object-cover flex-shrink-0 bg-zinc-800"
+              onerror="this.onerror=null;this.src='${FALLBACK_ART}';"
+            >
+            <div class="min-w-0 flex-1">
+              <a href="${urlSafe}" target="_blank" rel="noopener noreferrer" class="font-medium text-zinc-200 hover:text-white truncate block">
+                ${titleSafe}
+              </a>
+              <p class="text-[11px] text-zinc-400 truncate">${artistSafe}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 flex-shrink-0 text-[11px] text-zinc-500">
+            <button 
+              type="button" 
+              data-action="curator" 
+              data-curator="${submitterSafe}"
+              class="hover:text-zinc-300 hover:underline transition hidden sm:inline"
+              title="Filter by @${submitterSafe}"
+            >
+              @${submitterSafe}
+            </button>
+            <div class="flex items-center gap-2">
+              <button 
+                type="button" 
+                data-action="copy" 
+                data-url="${urlSafe}" 
+                class="hover:text-zinc-200 transition p-1" 
+                title="Copy Smartlink"
+              >
+                ⎘
+              </button>
+              <a href="${urlSafe}" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-200 transition p-1" title="Open stream link">↗</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function createCoverOnlyHTML(item, index) {
+      const titleSafe = escapeHtml(item.title || "Untitled");
+      const artistSafe = escapeHtml(item.artist || "Unknown Artist");
+      const submitterSafe = escapeHtml(item.submitted_by_name || "Community");
+      const urlSafe = sanitizeUrl(item.smartlink_url || item.original_url);
+      const coverSafe = sanitizeUrl(item.cover_url);
+      const isSelected = index === activeIndex;
+
+      return `
+        <a 
+          data-index="${index}"
+          href="${urlSafe}" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          title="${titleSafe} — ${artistSafe} (@${submitterSafe})"
+          class="card-entry group aspect-square bg-zinc-900 rounded-lg overflow-hidden border ${isSelected ? "border-zinc-400 ring-2 ring-zinc-500/50" : "border-zinc-800/80 hover:border-zinc-500"} transition-all block relative"
+        >
+          <img 
+            src="${coverSafe}" 
+            alt="${titleSafe} - ${artistSafe}" 
+            loading="lazy" 
+            decoding="async"
+            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 ease-out"
+            onerror="this.onerror=null;this.src='${FALLBACK_ART}';"
+          >
+        </a>
+      `;
+    }
+
+    function updateActiveSelection(newIdx, scroll = true) {
+      if (activeIndex >= 0) {
+        const oldEl = document.querySelector(`[data-index="${activeIndex}"]`);
+        if (oldEl) {
+          oldEl.classList.remove("ring-2", "ring-1", "ring-zinc-500/50", "border-zinc-400");
+          oldEl.classList.add("border-zinc-800/80");
+        }
+      }
+      activeIndex = newIdx;
+      if (activeIndex >= 0) {
+        const newEl = document.querySelector(`[data-index="${activeIndex}"]`);
+        if (newEl) {
+          newEl.classList.remove("border-zinc-800/80");
+          newEl.classList.add(currentView === "list" ? "ring-1" : "ring-2", "ring-zinc-500/50", "border-zinc-400");
+          if (scroll) newEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+      }
+    }
+
+    function render(resetCount = false) {
+      const container = document.getElementById("grid");
+      const clearBtn = document.getElementById("clearSearch");
+      const loadMoreContainer = document.getElementById("loadMoreContainer");
+      const query = document.getElementById("searchInput").value.trim();
+
+      clearBtn.classList.toggle("hidden", query.length === 0);
+
+      if (currentView === "grid") {
+        container.className = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4";
+      } else if (currentView === "covers") {
+        container.className = "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-2.5 sm:gap-3";
+      } else {
+        container.className = "flex flex-col gap-1.5";
+      }
+
+      const items = getProcessedItems();
+
+      if (resetCount) {
+        renderedCount = items.length;
+      }
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-20 text-center text-zinc-500 text-xs">
+            No submissions found matching criteria.
+          </div>
         `;
-      }).join("");
+        loadMoreContainer.classList.add("hidden");
+        return;
+      }
+
+      const visibleItems = items.slice(0, renderedCount);
+      let renderer = createCardHTML;
+      if (currentView === "covers") renderer = createCoverOnlyHTML;
+      else if (currentView === "list") renderer = createListRowHTML;
+
+      container.innerHTML = visibleItems.map((item, idx) => renderer(item, idx)).join("");
+
+      if (renderedCount < items.length) {
+        loadMoreContainer.classList.remove("hidden");
+      } else {
+        loadMoreContainer.classList.add("hidden");
+      }
     }
 
     // =========================================================================
-    // EVENT LISTENERS
+    // EVENT DELEGATION & LISTENERS
     // =========================================================================
+    document.getElementById("grid").addEventListener("click", (e) => {
+      const curatorBtn = e.target.closest('[data-action="curator"]');
+      if (curatorBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        setCuratorSearch(curatorBtn.dataset.curator);
+        return;
+      }
+
+      const copyBtn = e.target.closest('[data-action="copy"]');
+      if (copyBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        copyText(copyBtn.dataset.url);
+        showToast("✓ Smartlink copied!");
+        return;
+      }
+    });
+
     document.querySelectorAll(".filter-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".filter-btn").forEach(b => {
@@ -262,28 +897,271 @@
         btn.classList.add("bg-zinc-800", "text-white", "font-medium");
         btn.classList.remove("text-zinc-400");
         currentFilter = btn.dataset.type;
-        render();
+        activeIndex = -1;
+        syncStateToURL();
+        render(true);
       });
     });
 
-    document.getElementById("sortSelect").addEventListener("change", (e) => {
-      currentSort = e.target.value;
-      render();
+    const sortBtn = document.getElementById("sortMenuBtn");
+    const sortDropdown = document.getElementById("sortDropdown");
+
+    sortBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      settingsDropdown.classList.add("hidden");
+      sortDropdown.classList.toggle("hidden");
+    });
+
+    sortDropdown.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
+    document.querySelectorAll(".sort-option").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentSort = btn.dataset.sort;
+        updateSortUI();
+        sortDropdown.classList.add("hidden");
+        activeIndex = -1;
+        syncStateToURL();
+        render(true);
+      });
+    });
+
+    document.getElementById("viewGridBtn").addEventListener("click", () => {
+      currentView = "grid";
+      updateViewButtons();
+      syncStateToURL();
+      render(false);
+    });
+
+    document.getElementById("viewCoversBtn").addEventListener("click", () => {
+      currentView = "covers";
+      updateViewButtons();
+      syncStateToURL();
+      render(false);
+    });
+
+    document.getElementById("viewListBtn").addEventListener("click", () => {
+      currentView = "list";
+      updateViewButtons();
+      syncStateToURL();
+      render(false);
+    });
+
+    const settingsBtn = document.getElementById("settingsMenuBtn");
+    const settingsDropdown = document.getElementById("settingsDropdown");
+
+    settingsBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      sortDropdown.classList.add("hidden");
+      settingsDropdown.classList.toggle("hidden");
+    });
+
+    settingsDropdown.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const exportBtn = e.target.closest("[data-export]");
+      if (exportBtn) {
+        exportData(exportBtn.dataset.export);
+      }
+    });
+
+    document.addEventListener("click", () => {
+      settingsDropdown.classList.add("hidden");
+      sortDropdown.classList.add("hidden");
+    });
+
+    const shortcutsModal = document.getElementById("shortcutsModal");
+    const shortcutsBtn = document.getElementById("shortcutsBtn");
+    const closeShortcutsBtn = document.getElementById("closeShortcutsBtn");
+
+    shortcutsBtn.addEventListener("click", () => {
+      settingsDropdown.classList.add("hidden");
+      shortcutsModal.classList.remove("hidden");
+    });
+
+    closeShortcutsBtn.addEventListener("click", () => {
+      shortcutsModal.classList.add("hidden");
+    });
+
+    shortcutsModal.addEventListener("click", (e) => {
+      if (e.target === shortcutsModal) {
+        shortcutsModal.classList.add("hidden");
+      }
+    });
+
+    const videoModal = document.getElementById("videoModal");
+    const videoIframe = document.getElementById("videoIframe");
+    const fileNotice = document.getElementById("fileProtocolNotice");
+    const closeVideoBtn = document.getElementById("closeVideoBtn");
+    const logoEasterEggBtn = document.getElementById("logoEasterEggBtn");
+
+    function openVideoModal() {
+      if (window.location.protocol === "file:") {
+        fileNotice.classList.remove("hidden");
+        videoIframe.src = "";
+      } else {
+        fileNotice.classList.add("hidden");
+        videoIframe.src = "https://www.youtube.com/embed/V4IuLJFEzxY?autoplay=1&rel=0&playsinline=1";
+      }
+      videoModal.classList.remove("hidden");
+    }
+
+    function closeVideoModal() {
+      videoModal.classList.add("hidden");
+      videoIframe.src = "";
+    }
+
+    if (logoEasterEggBtn) {
+      logoEasterEggBtn.addEventListener("click", (e) => {
+        if (e.metaKey || e.ctrlKey || e.button === 1) return;
+        e.preventDefault();
+        openVideoModal();
+      });
+    }
+
+    if (closeVideoBtn) closeVideoBtn.addEventListener("click", closeVideoModal);
+    if (videoModal) {
+      videoModal.addEventListener("click", (e) => {
+        if (e.target === videoModal) closeVideoModal();
+      });
+    }
+
+    function applyTheme(theme) {
+      const isLight = theme === "light";
+      document.documentElement.classList.toggle("light", isLight);
+      const moonIcon = document.getElementById("themeMoonIcon");
+      const sunIcon = document.getElementById("themeSunIcon");
+      const label = document.getElementById("themeLabel");
+      if (moonIcon && sunIcon) {
+        moonIcon.classList.toggle("hidden", isLight);
+        sunIcon.classList.toggle("hidden", !isLight);
+      }
+      if (label) {
+        label.textContent = isLight ? "Light" : "Dark";
+      }
+      try {
+        localStorage.setItem("walkmonkey_theme", theme);
+      } catch (err) {}
+    }
+
+    function initTheme() {
+      let saved = "dark";
+      try {
+        saved = localStorage.getItem("walkmonkey_theme") || "dark";
+      } catch (err) {}
+      applyTheme(saved);
+    }
+
+    document.getElementById("themeToggleBtn").addEventListener("click", () => {
+      const current = document.documentElement.classList.contains("light") ? "light" : "dark";
+      const next = current === "light" ? "dark" : "light";
+      applyTheme(next);
     });
 
     const searchInput = document.getElementById("searchInput");
     searchInput.addEventListener("input", () => {
       clearTimeout(searchDebounceTimer);
-      searchDebounceTimer = setTimeout(render, 120);
+      searchDebounceTimer = setTimeout(() => {
+        activeIndex = -1;
+        syncStateToURL();
+        render(true);
+      }, 120);
     });
 
     document.getElementById("clearSearch").addEventListener("click", () => {
       searchInput.value = "";
-      searchInput.focus();
-      render();
+      activeIndex = -1;
+      syncStateToURL();
+      render(true);
     });
 
-    // Run Initial Operations
+    const loadMoreBtn = document.getElementById("loadMoreBtn");
+    loadMoreBtn.addEventListener("click", () => {
+      renderedCount += PAGE_CHUNK;
+      render(false);
+    });
+
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !document.getElementById("loadMoreContainer").classList.contains("hidden")) {
+          renderedCount += PAGE_CHUNK;
+          render(false);
+        }
+      }, { rootMargin: "300px" });
+      observer.observe(loadMoreBtn);
+    }
+
+    window.addEventListener("keydown", (e) => {
+      const isInputActive = document.activeElement === searchInput;
+
+      if (e.key === "/" && !isInputActive) {
+        e.preventDefault();
+        searchInput.focus();
+        return;
+      }
+
+      if (e.key === "Escape") {
+        if (!videoModal.classList.contains("hidden")) {
+          closeVideoModal();
+          return;
+        }
+        if (!shortcutsModal.classList.contains("hidden")) {
+          shortcutsModal.classList.add("hidden");
+          return;
+        }
+        if (!settingsDropdown.classList.contains("hidden") || !sortDropdown.classList.contains("hidden")) {
+          settingsDropdown.classList.add("hidden");
+          sortDropdown.classList.add("hidden");
+          return;
+        }
+        const hadQuery = searchInput.value.trim().length > 0;
+        if (isInputActive || hadQuery) {
+          searchInput.value = "";
+          searchInput.blur();
+        }
+        updateActiveSelection(-1, false);
+        syncStateToURL();
+        if (hadQuery) {
+          render(true);
+        }
+        return;
+      }
+
+      if (e.key === "?" && !isInputActive) {
+        e.preventDefault();
+        shortcutsModal.classList.toggle("hidden");
+        return;
+      }
+
+      if (isInputActive) return;
+
+      const items = getProcessedItems();
+      const maxIdx = Math.min(items.length, renderedCount) - 1;
+
+      if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        if (maxIdx >= 0) {
+          const nextIdx = activeIndex < maxIdx ? activeIndex + 1 : 0;
+          updateActiveSelection(nextIdx);
+        }
+      } else if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        if (maxIdx >= 0) {
+          const prevIdx = activeIndex > 0 ? activeIndex - 1 : maxIdx;
+          updateActiveSelection(prevIdx);
+        }
+      } else if (e.key === "Enter" && activeIndex >= 0 && activeIndex <= maxIdx) {
+        e.preventDefault();
+        const selected = items[activeIndex];
+        const targetUrl = sanitizeUrl(selected.smartlink_url || selected.original_url);
+        if (targetUrl && targetUrl !== "#") window.open(targetUrl, "_blank", "noopener,noreferrer");
+      }
+    });
+
+    initTheme();
+    updateSortUI();
+    updateViewButtons();
+    readStateFromURL();
     loadData();
     subscribeRealtime();
   </script>
