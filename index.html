@@ -3,62 +3,106 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Forum Music Grid</title>
+  <title>walkmonkey</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Prevent image dragging and selection artifacts */
     img { -webkit-user-drag: none; user-select: none; }
+    .card-entry {
+      content-visibility: auto;
+      contain-intrinsic-size: 260px;
+    }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen p-4 sm:p-8 font-sans antialiased selection:bg-zinc-800">
-  <div class="max-w-7xl mx-auto space-y-6">
+<body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased font-sans selection:bg-zinc-800 selection:text-white">
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
     
-    <!-- Top Bar / Controls -->
-    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-white">Community Music Grid</h1>
-        <p class="text-xs text-zinc-400 mt-1">Click any cover to listen on Spotify, YouTube Music, or Apple Music</p>
+    <!-- Top Bar -->
+    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
+      <div class="flex items-center h-9">
+        <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl leading-none m-0 p-0">
+          walkmonkey
+        </h1>
       </div>
-      
-      <div class="flex flex-wrap items-center gap-3">
+
+      <!-- Controls & Filtering (Unified h-9 baseline) -->
+      <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
         <!-- Live Search -->
-        <div class="relative">
+        <div class="relative flex-1 sm:w-64 sm:flex-initial">
           <input 
             id="searchInput" 
             type="text" 
-            placeholder="Search title, artist, or user..." 
-            class="bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 w-56 transition"
+            placeholder="Search album, artist, curator..." 
+            autocomplete="off"
+            aria-label="Search submissions"
+            class="w-full h-9 bg-zinc-900 border border-zinc-800 text-xs rounded-lg pl-3 pr-8 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition box-border"
           >
+          <button id="clearSearch" aria-label="Clear search" class="hidden absolute right-2.5 inset-y-0 my-auto h-4 w-4 flex items-center justify-center text-zinc-500 hover:text-zinc-300 text-xs leading-none">✕</button>
         </div>
-        
-        <!-- Filter: All / Albums / Tracks -->
-        <div class="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800 text-xs">
-          <button class="filter-btn px-3 py-1 rounded bg-zinc-800 text-white font-medium transition" data-type="all">All</button>
-          <button class="filter-btn px-3 py-1 rounded text-zinc-400 hover:text-white transition" data-type="album">Albums</button>
-          <button class="filter-btn px-3 py-1 rounded text-zinc-400 hover:text-white transition" data-type="song">Tracks</button>
+
+        <!-- Filter Segmented Control -->
+        <div class="inline-flex h-9 items-center p-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs box-border">
+          <button class="filter-btn h-full px-3 rounded flex items-center justify-center bg-zinc-800 text-white font-medium transition leading-none" data-type="all">All</button>
+          <button class="filter-btn h-full px-3 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" data-type="album">Albums</button>
+          <button class="filter-btn h-full px-3 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" data-type="song">Tracks</button>
         </div>
+
+        <!-- Sort Select -->
+        <select 
+          id="sortSelect" 
+          class="h-9 bg-zinc-900 border border-zinc-800 text-xs rounded-lg px-3 text-zinc-300 focus:outline-none focus:border-zinc-500 transition cursor-pointer box-border"
+        >
+          <option value="newest">Recently Added</option>
+          <option value="oldest">Oldest First</option>
+          <option value="artist">Artist (A–Z)</option>
+          <option value="title">Title (A–Z)</option>
+        </select>
       </div>
     </header>
 
-    <!-- Album Counter & Status -->
-    <div class="flex items-center justify-between text-xs text-zinc-500">
-      <span id="itemCount">Loading entries...</span>
-    </div>
+    <!-- Grid Container -->
+    <main>
+      <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4">
+        <!-- Loading skeletons -->
+        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+      </div>
+    </main>
 
-    <!-- Responsive Artwork Grid -->
-    <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
   </div>
 
   <script>
-    // --- SUPABASE CONFIGURATION ---
+    // =========================================================================
+    // CONFIGURATION
+    // =========================================================================
     const SUPABASE_URL = "https://jsbaldxbsegrsottutav.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_3dboqX10LLamDGWhpEZjYQ_l3Ca0Rfd"; // Paste your public sb_publishable key here
+    const SUPABASE_ANON_KEY = "YOUR_SB_PUBLISHABLE_ANON_KEY"; // Paste your sb_publishable_... key here
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let allItems = [];
-    let currentTypeFilter = "all";
+    let currentFilter = "all";
+    let currentSort = "newest";
+    let searchDebounceTimer = null;
 
+    // Fast HTML escaping helper to prevent injection
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // =========================================================================
+    // DATA FETCHING & REALTIME
+    // =========================================================================
     async function loadData() {
       const { data, error } = await client
         .from("submissions")
@@ -66,85 +110,149 @@
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Database read error:", error);
-        document.getElementById("itemCount").innerText = "Failed to load submissions.";
+        console.error("[Supabase Error]", error);
         return;
       }
 
-      allItems = data;
+      allItems = data || [];
       render();
     }
 
+    function subscribeRealtime() {
+      client
+        .channel("submissions-live")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "submissions" },
+          (payload) => {
+            if (!allItems.some(item => item.id === payload.new.id)) {
+              allItems.unshift(payload.new);
+              render();
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "submissions" },
+          (payload) => {
+            allItems = allItems.map(item => item.id === payload.new.id ? payload.new : item);
+            render();
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "submissions" },
+          (payload) => {
+            allItems = allItems.filter(item => item.id !== payload.old.id);
+            render();
+          }
+        )
+        .subscribe();
+    }
+
+    // =========================================================================
+    // RENDERING & INTERACTION
+    // =========================================================================
     function render() {
       const query = document.getElementById("searchInput").value.toLowerCase().trim();
       const container = document.getElementById("grid");
-      const counter = document.getElementById("itemCount");
+      const clearBtn = document.getElementById("clearSearch");
 
-      const filtered = allItems.filter(item => {
-        const matchesType = currentTypeFilter === "all" || item.entity_type === currentTypeFilter;
-        const matchesSearch = 
-          item.title.toLowerCase().includes(query) || 
-          item.artist.toLowerCase().includes(query) ||
-          item.submitted_by_name.toLowerCase().includes(query);
+      clearBtn.classList.toggle("hidden", query.length === 0);
 
-        return matchesType && matchesSearch;
+      // Filtering
+      const processed = allItems.filter(item => {
+        const matchesType = currentFilter === "all" || item.entity_type === currentFilter;
+        if (!matchesType) return false;
+        if (!query) return true;
+
+        return (
+          (item.title && item.title.toLowerCase().includes(query)) ||
+          (item.artist && item.artist.toLowerCase().includes(query)) ||
+          (item.submitted_by_name && item.submitted_by_name.toLowerCase().includes(query))
+        );
       });
 
-      counter.innerText = `Showing ${filtered.length} of ${allItems.length} submissions`;
+      // Sorting
+      processed.sort((a, b) => {
+        if (currentSort === "newest") return (b.id || 0) - (a.id || 0);
+        if (currentSort === "oldest") return (a.id || 0) - (b.id || 0);
+        if (currentSort === "artist") return (a.artist || "").localeCompare(b.artist || "");
+        if (currentSort === "title") return (a.title || "").localeCompare(b.title || "");
+        return 0;
+      });
 
-      if (filtered.length === 0) {
+      if (processed.length === 0) {
         container.innerHTML = `
-          <div class="col-span-full py-16 text-center text-zinc-600 text-sm">
-            No entries match your search or filter.
+          <div class="col-span-full py-20 text-center text-zinc-500 text-xs">
+            No entries found.
           </div>
         `;
         return;
       }
 
-      container.innerHTML = filtered.map(item => `
-        <a 
-          href="${item.smartlink_url}" 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          class="group relative bg-zinc-900/60 rounded-lg overflow-hidden border border-zinc-800/80 hover:border-zinc-600 transition flex flex-col hover:-translate-y-0.5 duration-150"
-        >
-          <!-- Album Artwork -->
-          <div class="aspect-square w-full overflow-hidden bg-zinc-900 relative">
-            <img 
-              src="${item.cover_url}" 
-              alt="${item.title}" 
-              loading="lazy" 
-              class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-              onerror="this.src='https://placehold.co/400x400/18181b/71717a?text=No+Cover';"
-            >
-          </div>
+      container.innerHTML = processed.map(item => {
+        const isAlbum = item.entity_type === "album";
+        const badgeColor = isAlbum 
+          ? "bg-amber-400/10 text-amber-300 border-amber-400/20" 
+          : "bg-sky-400/10 text-sky-300 border-sky-400/20";
+        
+        const titleSafe = escapeHtml(item.title);
+        const artistSafe = escapeHtml(item.artist);
+        const submitterSafe = escapeHtml(item.submitted_by_name);
+        const urlSafe = escapeHtml(item.smartlink_url || item.original_url);
+        const coverSafe = escapeHtml(item.cover_url);
 
-          <!-- Metadata -->
-          <div class="p-2.5 flex-1 flex flex-col justify-between">
-            <div>
-              <div class="font-medium text-xs truncate text-zinc-200 group-hover:text-white" title="${item.title}">
-                ${item.title}
-              </div>
-              <div class="text-[11px] text-zinc-400 truncate mt-0.5" title="${item.artist}">
-                ${item.artist}
-              </div>
-            </div>
-
-            <!-- Footer: Type & Submitter -->
-            <div class="mt-2.5 flex items-center justify-between text-[10px] text-zinc-500 border-t border-zinc-800/80 pt-1.5">
-              <span class="uppercase tracking-wider font-semibold text-[9px] ${item.entity_type === 'album' ? 'text-amber-400/80' : 'text-sky-400/80'}">
-                ${item.entity_type}
-              </span>
-              <span class="truncate max-w-[90px]" title="Submitted by ${item.submitted_by_name}">
-                via ${item.submitted_by_name}
+        return `
+          <a 
+            href="${urlSafe}" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="card-entry group bg-zinc-900/60 rounded-lg overflow-hidden border border-zinc-800/80 hover:border-zinc-600 transition-colors flex flex-col justify-between"
+          >
+            <!-- Artwork Wrapper -->
+            <div class="aspect-square w-full bg-zinc-900 relative overflow-hidden flex-shrink-0">
+              <img 
+                src="${coverSafe}" 
+                alt="${titleSafe}" 
+                loading="lazy" 
+                decoding="async"
+                class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200 ease-out"
+                onerror="this.src='https://placehold.co/400x400/18181b/71717a?text=No+Cover';"
+              >
+              <!-- Type Badge -->
+              <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider border backdrop-blur-sm ${badgeColor}">
+                ${escapeHtml(item.entity_type)}
               </span>
             </div>
-          </div>
-        </a>
-      `).join("");
+
+            <!-- Metadata Details -->
+            <div class="p-2.5 flex-1 flex flex-col justify-between gap-2.5">
+              <div class="min-w-0">
+                <h3 class="font-medium text-xs truncate text-zinc-200 group-hover:text-white" title="${titleSafe}">
+                  ${titleSafe}
+                </h3>
+                <p class="text-[11px] text-zinc-400 truncate mt-0.5" title="${artistSafe}">
+                  ${artistSafe}
+                </p>
+              </div>
+
+              <!-- Submitter Footer -->
+              <div class="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-zinc-500 min-w-0">
+                <span class="truncate pr-1.5" title="Submitted by ${submitterSafe}">
+                  via @${submitterSafe}
+                </span>
+                <span class="text-zinc-500 group-hover:text-zinc-300 flex-shrink-0">↗</span>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join("");
     }
 
-    // Filter Button Handlers
+    // =========================================================================
+    // EVENT LISTENERS
+    // =========================================================================
     document.querySelectorAll(".filter-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".filter-btn").forEach(b => {
@@ -153,13 +261,31 @@
         });
         btn.classList.add("bg-zinc-800", "text-white", "font-medium");
         btn.classList.remove("text-zinc-400");
-        currentTypeFilter = btn.dataset.type;
+        currentFilter = btn.dataset.type;
         render();
       });
     });
 
-    document.getElementById("searchInput").addEventListener("input", render);
+    document.getElementById("sortSelect").addEventListener("change", (e) => {
+      currentSort = e.target.value;
+      render();
+    });
+
+    const searchInput = document.getElementById("searchInput");
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(render, 120);
+    });
+
+    document.getElementById("clearSearch").addEventListener("click", () => {
+      searchInput.value = "";
+      searchInput.focus();
+      render();
+    });
+
+    // Run Initial Operations
     loadData();
+    subscribeRealtime();
   </script>
 </body>
 </html>
