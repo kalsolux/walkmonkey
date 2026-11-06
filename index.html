@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forum Music Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* Prevent image dragging and selection artifacts */
+    img { -webkit-user-drag: none; user-select: none; }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen p-4 sm:p-8 font-sans antialiased selection:bg-zinc-800">
+  <div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- Top Bar / Controls -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-white">Community Music Grid</h1>
+        <p class="text-xs text-zinc-400 mt-1">Click any cover to listen on Spotify, YouTube Music, or Apple Music</p>
+      </div>
+      
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Live Search -->
+        <div class="relative">
+          <input 
+            id="searchInput" 
+            type="text" 
+            placeholder="Search title, artist, or user..." 
+            class="bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 w-56 transition"
+          >
+        </div>
+        
+        <!-- Filter: All / Albums / Tracks -->
+        <div class="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800 text-xs">
+          <button class="filter-btn px-3 py-1 rounded bg-zinc-800 text-white font-medium transition" data-type="all">All</button>
+          <button class="filter-btn px-3 py-1 rounded text-zinc-400 hover:text-white transition" data-type="album">Albums</button>
+          <button class="filter-btn px-3 py-1 rounded text-zinc-400 hover:text-white transition" data-type="song">Tracks</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Album Counter & Status -->
+    <div class="flex items-center justify-between text-xs text-zinc-500">
+      <span id="itemCount">Loading entries...</span>
+    </div>
+
+    <!-- Responsive Artwork Grid -->
+    <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+  </div>
+
+  <script>
+    // --- SUPABASE CONFIGURATION ---
+    const SUPABASE_URL = "https://jsbaldxbsegrsottutav.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_3dboqX10LLamDGWhpEZjYQ_l3Ca0Rfd"; // Paste your public sb_publishable key here
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let allItems = [];
+    let currentTypeFilter = "all";
+
+    async function loadData() {
+      const { data, error } = await client
+        .from("submissions")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Database read error:", error);
+        document.getElementById("itemCount").innerText = "Failed to load submissions.";
+        return;
+      }
+
+      allItems = data;
+      render();
+    }
+
+    function render() {
+      const query = document.getElementById("searchInput").value.toLowerCase().trim();
+      const container = document.getElementById("grid");
+      const counter = document.getElementById("itemCount");
+
+      const filtered = allItems.filter(item => {
+        const matchesType = currentTypeFilter === "all" || item.entity_type === currentTypeFilter;
+        const matchesSearch = 
+          item.title.toLowerCase().includes(query) || 
+          item.artist.toLowerCase().includes(query) ||
+          item.submitted_by_name.toLowerCase().includes(query);
+
+        return matchesType && matchesSearch;
+      });
+
+      counter.innerText = `Showing ${filtered.length} of ${allItems.length} submissions`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-16 text-center text-zinc-600 text-sm">
+            No entries match your search or filter.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => `
+        <a 
+          href="${item.smartlink_url}" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="group relative bg-zinc-900/60 rounded-lg overflow-hidden border border-zinc-800/80 hover:border-zinc-600 transition flex flex-col hover:-translate-y-0.5 duration-150"
+        >
+          <!-- Album Artwork -->
+          <div class="aspect-square w-full overflow-hidden bg-zinc-900 relative">
+            <img 
+              src="${item.cover_url}" 
+              alt="${item.title}" 
+              loading="lazy" 
+              class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+              onerror="this.src='https://placehold.co/400x400/18181b/71717a?text=No+Cover';"
+            >
+          </div>
+
+          <!-- Metadata -->
+          <div class="p-2.5 flex-1 flex flex-col justify-between">
+            <div>
+              <div class="font-medium text-xs truncate text-zinc-200 group-hover:text-white" title="${item.title}">
+                ${item.title}
+              </div>
+              <div class="text-[11px] text-zinc-400 truncate mt-0.5" title="${item.artist}">
+                ${item.artist}
+              </div>
+            </div>
+
+            <!-- Footer: Type & Submitter -->
+            <div class="mt-2.5 flex items-center justify-between text-[10px] text-zinc-500 border-t border-zinc-800/80 pt-1.5">
+              <span class="uppercase tracking-wider font-semibold text-[9px] ${item.entity_type === 'album' ? 'text-amber-400/80' : 'text-sky-400/80'}">
+                ${item.entity_type}
+              </span>
+              <span class="truncate max-w-[90px]" title="Submitted by ${item.submitted_by_name}">
+                via ${item.submitted_by_name}
+              </span>
+            </div>
+          </div>
+        </a>
+      `).join("");
+    }
+
+    // Filter Button Handlers
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn").forEach(b => {
+          b.classList.remove("bg-zinc-800", "text-white", "font-medium");
+          b.classList.add("text-zinc-400");
+        });
+        btn.classList.add("bg-zinc-800", "text-white", "font-medium");
+        btn.classList.remove("text-zinc-400");
+        currentTypeFilter = btn.dataset.type;
+        render();
+      });
+    });
+
+    document.getElementById("searchInput").addEventListener("input", render);
+    loadData();
+  </script>
+</body>
+</html>
