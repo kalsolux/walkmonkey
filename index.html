@@ -9,7 +9,7 @@
   <!-- Favicon & OpenGraph Metadata for Discord Previews -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E">
   <meta property="og:title" content="walkmonkey">
-  <meta property="og:description" content="Community music crate and release archive.">
+  <meta property="og:description" content="a music log with friends.">
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#09090b">
 
@@ -17,10 +17,38 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     img { -webkit-user-drag: none; user-select: none; }
-    .card-entry {
-      content-visibility: auto;
-      contain-intrinsic-size: 270px;
+    
+    /* Background Zenith Mesh Gradient */
+    body {
+      background-color: #09090b;
+      background-image: radial-gradient(circle at 50% 0%, rgba(39, 39, 42, 0.35) 0%, rgba(9, 9, 11, 0) 65%);
+      background-attachment: fixed;
     }
+
+    /* Card Hover Glow & Smooth Transitions (without paint-containment clipping) */
+    .card-entry {
+      transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .card-entry:hover {
+      box-shadow: 0 0 25px -5px rgba(255, 255, 255, 0.08);
+    }
+    .card-entry-cover {
+      transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .card-entry-cover:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5), 0 0 20px -4px rgba(255, 255, 255, 0.06);
+    }
+
+    /* Guaranteed Legibility: Explicit White Hover in Dark Mode & Black in Light Mode */
+    .group:hover .group-hover\:text-white {
+      color: #ffffff !important;
+    }
+    html.light .group:hover .group-hover\:text-white {
+      color: #000000 !important;
+    }
+
+    /* Custom scrollbar for subtle aesthetic */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: var(--sb-track, #09090b); }
     ::-webkit-scrollbar-thumb { background: var(--sb-thumb, #27272a); border-radius: 3px; }
@@ -34,7 +62,12 @@
     }
     html.light body {
       background-color: #fafafa;
+      background-image: radial-gradient(circle at 50% 0%, rgba(228, 228, 231, 0.6) 0%, rgba(250, 250, 250, 0) 65%);
       color: #09090b;
+    }
+    html.light header {
+      background-color: rgba(250, 250, 250, 0.85);
+      border-color: #e4e4e7;
     }
     html.light .bg-zinc-950 { background-color: #fafafa; }
     html.light .bg-zinc-900 { background-color: #ffffff; }
@@ -60,9 +93,13 @@
     html.light .card-entry {
       box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
     }
+    html.light .card-entry:hover {
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    }
     html.light #settingsDropdown,
     html.light #sortDropdown,
     html.light #shortcutsModal > div,
+    html.light #curatorModal > div,
     html.light #toast {
       background-color: #ffffff;
       border-color: #e4e4e7;
@@ -75,20 +112,36 @@
       color: #18181b;
     }
     html.light #toast span { color: #09090b; }
+
+    /* Light Mode Modal Buttons & Badges Contrast Fixes */
+    html.light .bg-zinc-800\/40,
+    html.light .bg-zinc-800\/80 { background-color: #f4f4f5; }
+    html.light .hover\:bg-zinc-800\/40:hover,
+    html.light .hover\:bg-zinc-700:hover { background-color: #e4e4e7; }
+    html.light .hover\:border-zinc-700:hover,
+    html.light .hover\:border-zinc-600:hover,
+    html.light .hover\:border-zinc-500:hover { border-color: #d4d4d8; }
+    html.light .ring-white\/10 { --tw-ring-color: rgba(0, 0, 0, 0.08); }
+    html.light #curatorTopArtists .artist-count-badge {
+      background-color: #f4f4f5;
+      color: #3f3f46;
+      border-color: #e4e4e7;
+    }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased font-sans selection:bg-zinc-800 selection:text-white flex flex-col justify-between">
+<body class="text-zinc-100 min-h-screen antialiased selection:bg-zinc-800 selection:text-white flex flex-col justify-between">
 
-  <!-- Main Container -->
-  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-1">
-    
-    <!-- Top Header Bar -->
-    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
+  <!-- Sticky Frosted Header Bar -->
+  <header class="sticky top-0 z-30 backdrop-blur-md bg-zinc-950/80 border-b border-zinc-800/80 py-3.5 transition-colors">
+    <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      
+      <!-- Logo -->
       <div class="flex items-center">
-        <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl leading-none m-0 p-0">
+        <h1 class="text-xl font-bold tracking-tight text-white sm:text-2xl leading-none m-0 p-0 font-mono">
           <a 
-            id="logoEasterEggBtn"
-            href="https://youtu.be/V4IuLJFEzxY" 
+            id="logoBtn"
+            href="./" 
+            title="Home (Shift + Click for surprise)"
             class="hover:opacity-80 transition-opacity cursor-pointer inline-block"
           >
             walkmonkey
@@ -96,9 +149,10 @@
         </h1>
       </div>
 
-      <!-- Controls & Filtering (Arranged: Category Filter -> Search -> Sort -> View Mode -> Settings) -->
-      <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
-        <!-- 1. Content Filter: Albums / Tracks -->
+      <!-- Controls & Filtering (Category -> Search -> Sort -> View Mode -> Settings) -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        
+        <!-- 1. Category Switcher (Albums / Tracks) -->
         <div class="inline-flex h-9 items-center p-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs box-border">
           <button class="filter-btn h-full px-2.5 rounded flex items-center justify-center bg-zinc-800 text-white font-medium transition leading-none" data-type="album" title="Albums" aria-label="Albums">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,7 +160,7 @@
               <circle cx="12" cy="12" r="2.5" stroke-width="2"></circle>
             </svg>
           </button>
-          <button class="filter-btn h-full px-2.5 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" data-type="song" title="Tracks" aria-label="Tracks">
+          <button class="filter-btn h-full px-2.5 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" data-type="track" title="Tracks" aria-label="Tracks">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
             </svg>
@@ -114,7 +168,7 @@
         </div>
 
         <!-- 2. Live Search -->
-        <div class="relative flex-1 sm:w-64 sm:flex-initial">
+        <div class="relative flex-1 sm:w-60 sm:flex-initial">
           <span class="absolute left-2.5 inset-y-0 my-auto h-4 w-4 flex items-center justify-center text-zinc-500 pointer-events-none">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -130,6 +184,7 @@
           >
           <button 
             id="clearSearch" 
+            title="Clear search" 
             aria-label="Clear search" 
             class="hidden absolute right-2.5 inset-y-0 my-auto h-4 w-4 flex items-center justify-center text-zinc-500 hover:text-zinc-300 text-xs leading-none"
           >
@@ -137,27 +192,35 @@
           </button>
         </div>
 
-        <!-- 3. Sort Options (SVG Button with Popover) -->
+        <!-- 3. Sort Options -->
         <div class="relative">
           <button 
             id="sortMenuBtn" 
             aria-label="Sort options" 
+            title="Sort options"
             class="h-9 w-9 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white rounded-lg transition flex items-center justify-center box-border" 
-            title="Sort"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
             </svg>
           </button>
           
           <div id="sortDropdown" class="hidden absolute right-0 mt-1.5 w-48 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1.5 z-40 text-xs">
-            <div class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Sort By</div>
+            <div class="px-3 pt-1 pb-1 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold font-mono">Sort By</div>
             <button data-sort="newest" class="sort-option w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition flex items-center justify-between cursor-pointer">
               <span>Newest Shared</span>
               <span class="sort-check text-zinc-400">✓</span>
             </button>
             <button data-sort="oldest" class="sort-option w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition flex items-center justify-between cursor-pointer">
               <span>Oldest Shared</span>
+              <span class="sort-check text-zinc-400 hidden">✓</span>
+            </button>
+            <button data-sort="listened" class="sort-option w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition flex items-center justify-between cursor-pointer">
+              <span>Most Listened</span>
+              <span class="sort-check text-zinc-400 hidden">✓</span>
+            </button>
+            <button data-sort="least-listened" class="sort-option w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition flex items-center justify-between cursor-pointer">
+              <span>Least Listened</span>
               <span class="sort-check text-zinc-400 hidden">✓</span>
             </button>
             <button data-sort="sharer" class="sort-option w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition flex items-center justify-between cursor-pointer">
@@ -175,26 +238,26 @@
           </div>
         </div>
 
-        <!-- 4. View Mode Switcher (Grid / Covers Only / List) -->
+        <!-- 4. View Mode Switcher -->
         <div class="inline-flex h-9 items-center p-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs box-border">
-          <button id="viewGridBtn" aria-label="Grid view" class="h-full px-2.5 rounded flex items-center justify-center bg-zinc-800 text-white transition leading-none" title="Standard Grid">
+          <button id="viewGridBtn" aria-label="Grid view" class="h-full px-2.5 rounded flex items-center justify-center bg-zinc-800 text-white transition leading-none" title="Grid view">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
           </button>
-          <button id="viewCoversBtn" aria-label="Covers only view" class="h-full px-2.5 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" title="Cover Wall (No Text)">
+          <button id="viewCoversBtn" aria-label="Cover wall view" class="h-full px-2.5 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" title="Cover wall view">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
           </button>
-          <button id="viewListBtn" aria-label="List view" class="h-full px-2.5 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" title="Compact List View">
+          <button id="viewListBtn" aria-label="List view" class="h-full px-2.5 rounded flex items-center justify-center text-zinc-400 hover:text-white transition leading-none" title="List view">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
           </button>
         </div>
 
-        <!-- 5. Settings Dropdown (Theme & Export) -->
+        <!-- 5. Settings Dropdown -->
         <div class="relative">
           <button 
             id="settingsMenuBtn" 
             aria-label="Settings" 
-            class="h-9 w-9 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white rounded-lg transition flex items-center justify-center box-border" 
             title="Settings"
+            class="h-9 w-9 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white rounded-lg transition flex items-center justify-center box-border" 
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -202,23 +265,23 @@
             </svg>
           </button>
           
-          <div id="settingsDropdown" class="hidden absolute right-0 mt-1.5 w-52 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-2 z-40 text-xs">
+          <div id="settingsDropdown" class="hidden absolute right-0 mt-1.5 w-52 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 z-40 text-xs">
             <!-- Theme Toggle -->
-            <div class="px-3 py-1.5 flex items-center justify-between border-b border-zinc-800/80 mb-1">
-              <span class="text-zinc-400 font-medium text-[11px] uppercase tracking-wider">Theme</span>
+            <div class="px-3 pt-1.5 pb-2 flex items-center justify-between border-b border-zinc-800/80 mb-1">
+              <span class="text-zinc-400 font-medium text-[11px] uppercase tracking-wider font-mono leading-none">Theme</span>
               <button 
                 id="themeToggleBtn" 
                 type="button" 
-                class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition text-[11px] cursor-pointer"
+                class="inline-flex items-center justify-center gap-1.5 px-2.5 h-6 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition text-[11px] font-medium leading-none cursor-pointer"
               >
-                <svg id="themeMoonIcon" class="w-3.5 h-3.5 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-                <svg id="themeSunIcon" class="w-3.5 h-3.5 text-zinc-300 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                <span id="themeLabel">Dark</span>
+                <svg id="themeMoonIcon" class="w-3.5 h-3.5 text-zinc-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                <svg id="themeSunIcon" class="w-3.5 h-3.5 text-zinc-300 hidden shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"></circle><line x1="12" y1="1" x2="12" y2="3" stroke-width="2" stroke-linecap="round"></line><line x1="12" y1="21" x2="12" y2="23" stroke-width="2" stroke-linecap="round"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke-width="2" stroke-linecap="round"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke-width="2" stroke-linecap="round"></line><line x1="1" y1="12" x2="3" y2="12" stroke-width="2" stroke-linecap="round"></line><line x1="21" y1="12" x2="23" y2="12" stroke-width="2" stroke-linecap="round"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke-width="2" stroke-linecap="round"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke-width="2" stroke-linecap="round"></line></svg>
+                <span id="themeLabel" class="leading-none">Dark</span>
               </button>
             </div>
 
             <!-- Export Options -->
-            <div class="px-3 pt-1.5 pb-1 text-[11px] uppercase tracking-wider text-zinc-500 font-medium">Export</div>
+            <div class="px-3 pt-1.5 pb-1 text-[11px] uppercase tracking-wider text-zinc-500 font-medium font-mono">Export</div>
             <button data-export="plaintext" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition cursor-pointer">Copy List (Artist - Title)</button>
             <button data-export="links" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition cursor-pointer">Copy Smartlinks</button>
             <button data-export="csv" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 hover:text-white transition cursor-pointer">Download CSV</button>
@@ -232,37 +295,84 @@
             </div>
           </div>
         </div>
-      </div>
-    </header>
 
-    <!-- Content Feed Container -->
-    <main>
-      <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4">
-        <!-- Loading skeletons -->
-        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
-        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
-        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
-        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
-        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
-        <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Crate Grid -->
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1">
+    <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 sm:gap-4">
+      <!-- Loading skeletons -->
+      <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+      <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+      <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+      <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+      <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+      <div class="aspect-square bg-zinc-900 border border-zinc-800/80 rounded-lg animate-pulse"></div>
+    </div>
+
+    <!-- Centered Bottom Record Counter -->
+    <div id="resultsFooter" class="py-12 text-center">
+      <span id="resultsCount" class="font-mono text-xs text-zinc-500 tracking-wider">0 found</span>
+    </div>
+  </main>
+
+  <!-- Curator Profile Modal -->
+  <div id="curatorModal" class="fixed inset-0 bg-black/65 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl max-w-sm w-full p-5 text-zinc-200">
+      <div class="flex items-center justify-between pb-3 border-b border-zinc-800/80">
+        <h3 id="curatorName" class="font-mono font-semibold text-sm text-white">@curator</h3>
+        <button id="closeCuratorBtn" aria-label="Close" title="Close" class="text-zinc-500 hover:text-zinc-300 transition text-xs leading-none p-1">✕</button>
       </div>
 
-      <!-- Pagination / Load More Sentinel -->
-      <div id="loadMoreContainer" class="mt-8 text-center hidden">
-        <button id="loadMoreBtn" class="px-4 py-2 text-xs bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg transition text-zinc-300">
-          Load More Records
+      <!-- Stats Grid / Direct Search Buttons -->
+      <div class="grid grid-cols-3 gap-2 my-4 text-center">
+        <button 
+          id="curatorBtnTotal" 
+          type="button" 
+          class="p-2 bg-zinc-800/40 hover:bg-zinc-800 rounded-lg border border-zinc-800/80 hover:border-zinc-700 transition cursor-pointer text-center group" 
+          title="Search all shared by curator"
+        >
+          <div id="curatorStatTotal" class="font-mono text-base font-bold text-white">0</div>
+          <div class="text-[10px] text-zinc-400 group-hover:text-zinc-300 uppercase tracking-wider font-mono">Shared</div>
+        </button>
+        <button 
+          id="curatorBtnAlbums" 
+          type="button" 
+          class="p-2 bg-zinc-800/40 hover:bg-zinc-800 rounded-lg border border-zinc-800/80 hover:border-zinc-700 transition cursor-pointer text-center group" 
+          title="Search albums by curator"
+        >
+          <div id="curatorStatAlbums" class="font-mono text-base font-bold text-white">0</div>
+          <div class="text-[10px] text-zinc-400 group-hover:text-zinc-300 uppercase tracking-wider font-mono">Albums</div>
+        </button>
+        <button 
+          id="curatorBtnTracks" 
+          type="button" 
+          class="p-2 bg-zinc-800/40 hover:bg-zinc-800 rounded-lg border border-zinc-800/80 hover:border-zinc-700 transition cursor-pointer text-center group" 
+          title="Search tracks by curator"
+        >
+          <div id="curatorStatTracks" class="font-mono text-base font-bold text-white">0</div>
+          <div class="text-[10px] text-zinc-400 group-hover:text-zinc-300 uppercase tracking-wider font-mono">Tracks</div>
         </button>
       </div>
-    </main>
 
+      <!-- Top Artists Breakdown -->
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold font-mono mb-2">Top Artists</div>
+        <div id="curatorTopArtists" class="space-y-1.5 text-xs">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Keyboard Shortcuts Modal -->
   <div id="shortcutsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl max-w-sm w-full p-5 text-zinc-200">
       <div class="flex items-center justify-between pb-3 border-b border-zinc-800/80">
-        <h3 class="font-semibold text-xs text-white uppercase tracking-wider">Keyboard Shortcuts</h3>
-        <button id="closeShortcutsBtn" aria-label="Close shortcuts modal" class="text-zinc-500 hover:text-zinc-300 transition text-xs leading-none p-1">✕</button>
+        <h3 class="font-semibold text-xs text-white uppercase tracking-wider font-mono">Keyboard Shortcuts</h3>
+        <button id="closeShortcutsBtn" aria-label="Close" title="Close" class="text-zinc-500 hover:text-zinc-300 transition text-xs leading-none p-1">✕</button>
       </div>
       <div class="mt-4 space-y-2.5 text-xs">
         <div class="flex items-center justify-between">
@@ -270,23 +380,16 @@
           <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">/</kbd>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-zinc-400">Clear search / Close panels</span>
+          <span class="text-zinc-400">Clear search / Close modal</span>
           <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">Esc</kbd>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-zinc-400">Next record</span>
+          <span class="text-zinc-400">Navigate records</span>
           <div class="flex items-center gap-1">
-            <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">j</kbd>
-            <span class="text-zinc-600">or</span>
-            <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">↓</kbd>
-          </div>
-        </div>
-        <div class="flex items-center justify-between">
-          <span class="text-zinc-400">Previous record</span>
-          <div class="flex items-center gap-1">
-            <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">k</kbd>
-            <span class="text-zinc-600">or</span>
-            <kbd class="px-2 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">↑</kbd>
+            <kbd class="px-1.5 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">←</kbd>
+            <kbd class="px-1.5 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">↓</kbd>
+            <kbd class="px-1.5 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">↑</kbd>
+            <kbd class="px-1.5 py-0.5 bg-zinc-800 border border-zinc-700/80 rounded font-mono text-[11px] text-zinc-300">→</kbd>
           </div>
         </div>
         <div class="flex items-center justify-between">
@@ -299,7 +402,7 @@
 
   <!-- Video Easter Egg Modal -->
   <div id="videoModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 hidden">
-    <button id="closeVideoBtn" aria-label="Close video modal" class="absolute top-5 right-5 text-zinc-400 hover:text-white transition p-2 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 rounded-full z-10 text-xs leading-none">
+    <button id="closeVideoBtn" aria-label="Close video modal" title="Close" class="absolute top-5 right-5 text-zinc-400 hover:text-white transition p-2 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 rounded-full z-10 text-xs leading-none">
       ✕
     </button>
     <div class="w-full max-w-4xl aspect-video relative rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 bg-black flex items-center justify-center">
@@ -315,7 +418,7 @@
       <div id="fileProtocolNotice" class="hidden absolute inset-0 bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-zinc-300">
         <p class="text-sm font-medium mb-1.5 text-zinc-200">YouTube restricts embedded playback when opening files directly from disk (<code class="text-zinc-300 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded text-xs">file://</code>).</p>
         <p class="text-xs text-zinc-500 max-w-md mb-4">Once hosted on a web server or run locally (e.g. <code class="text-zinc-400 bg-zinc-900 px-1 py-0.5 rounded">npx serve</code>), this plays directly in the modal!</p>
-        <a href="https://youtu.be/V4IuLJFEzxY" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs rounded-lg transition inline-flex items-center gap-1.5">
+        <a href="https://youtu.be/d6uN9xYUMxE" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs rounded-lg transition inline-flex items-center gap-1.5">
           Watch on YouTube ↗
         </a>
       </div>
@@ -343,18 +446,19 @@
     let currentSort = "newest";
     let currentView = "grid";
     let activeIndex = -1;
+    let currentCuratorProfile = null;
+    let initialCuratorParam = null;
     let searchDebounceTimer = null;
     let toastTimer = null;
-    let renderedCount = 0;
-    const PAGE_CHUNK = 1000;
 
     // Normalizes item fields once on ingestion for O(1) searches and fast numeric sorting
     function normalizeItem(item) {
       if (!item) return null;
-      if (item.entity_type === "track") item.entity_type = "song";
+      if (item.entity_type === "song") item.entity_type = "track";
       if (!item.entity_type && item.canonical_id) {
-        item.entity_type = item.canonical_id.includes(":track:") ? "song" : "album";
+        item.entity_type = item.canonical_id.includes(":track:") ? "track" : "album";
       }
+      item.listened_count = Number(item.listened_count) || 0;
       item._search = `${item.title || ""} ${item.artist || ""} ${item.submitted_by_name || ""}`.toLowerCase();
       item._ts = item.created_at ? Date.parse(item.created_at) || 0 : 0;
       item._title = (item.title || "").toLowerCase();
@@ -428,6 +532,10 @@
         const q = document.getElementById("searchInput").value.trim();
         if (q) params.set("q", q);
 
+        if (currentCuratorProfile) {
+          params.set("curator", currentCuratorProfile);
+        }
+
         const queryStr = params.toString();
         const newUrl = queryStr ? `${window.location.pathname}?${queryStr}` : window.location.pathname;
         window.history.replaceState({}, "", newUrl);
@@ -440,20 +548,17 @@
         if (!window.location.search) return;
 
         const params = new URLSearchParams(window.location.search);
-        if (params.has("type") && ["album", "song"].includes(params.get("type"))) {
-          currentFilter = params.get("type");
-          document.querySelectorAll(".filter-btn").forEach(btn => {
-            const isActive = btn.dataset.type === currentFilter;
-            btn.classList.toggle("bg-zinc-800", isActive);
-            btn.classList.toggle("text-white", isActive);
-            btn.classList.toggle("font-medium", isActive);
-            btn.classList.toggle("text-zinc-400", !isActive);
-          });
+        if (params.has("type")) {
+          const rawType = params.get("type");
+          const normalizedType = rawType === "song" ? "track" : rawType;
+          if (["album", "track", "all"].includes(normalizedType)) {
+            setCategory(normalizedType);
+          }
         }
 
         if (params.has("sort")) {
           const s = params.get("sort");
-          if (["newest", "oldest", "artist", "title", "sharer"].includes(s)) {
+          if (["newest", "oldest", "listened", "least-listened", "artist", "title", "sharer"].includes(s)) {
             currentSort = s;
             updateSortUI();
           }
@@ -468,6 +573,10 @@
           const qVal = params.get("q");
           document.getElementById("searchInput").value = qVal;
           document.getElementById("clearSearch").classList.toggle("hidden", qVal.trim().length === 0);
+        }
+
+        if (params.has("curator") || params.has("user")) {
+          initialCuratorParam = params.get("curator") || params.get("user");
         }
       } catch (err) {}
     }
@@ -500,12 +609,109 @@
       });
     }
 
+    function setCategory(type) {
+      currentFilter = type;
+      document.querySelectorAll(".filter-btn").forEach(btn => {
+        const isActive = btn.dataset.type === currentFilter;
+        btn.classList.toggle("bg-zinc-800", isActive);
+        btn.classList.toggle("text-white", isActive);
+        btn.classList.toggle("font-medium", isActive);
+        btn.classList.toggle("text-zinc-400", !isActive);
+      });
+    }
+
     function setCuratorSearch(curator) {
       const searchInput = document.getElementById("searchInput");
-      searchInput.value = curator;
+      searchInput.value = `@${curator}`;
       activeIndex = -1;
       syncStateToURL();
-      render(true);
+      render();
+    }
+
+    function filterByArtist(artistName) {
+      if (!artistName) return;
+      setCategory("all");
+      const searchInput = document.getElementById("searchInput");
+      searchInput.value = artistName;
+      activeIndex = -1;
+      syncStateToURL();
+      render();
+    }
+
+    function openCuratorProfile(curatorName) {
+      if (!curatorName) return;
+      currentCuratorProfile = curatorName;
+      syncStateToURL();
+
+      const userItems = allItems.filter(i => (i.submitted_by_name || "").toLowerCase() === curatorName.toLowerCase());
+      if (userItems.length === 0) {
+        setCuratorSearch(curatorName);
+        return;
+      }
+
+      const total = userItems.length;
+      const albums = userItems.filter(i => i.entity_type === "album").length;
+      const tracks = userItems.filter(i => i.entity_type === "track").length;
+
+      // Group and count artist occurrences
+      const artistCounts = {};
+      userItems.forEach(i => {
+        const a = (i.artist || "Unknown Artist").trim();
+        artistCounts[a] = (artistCounts[a] || 0) + 1;
+      });
+      const topArtists = Object.entries(artistCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+
+      document.getElementById("curatorName").textContent = `@${curatorName}`;
+      document.getElementById("curatorStatTotal").textContent = total;
+      document.getElementById("curatorStatAlbums").textContent = albums;
+      document.getElementById("curatorStatTracks").textContent = tracks;
+
+      const topArtistsEl = document.getElementById("curatorTopArtists");
+      if (topArtists.length > 0) {
+        topArtistsEl.innerHTML = topArtists.map(([artist, count]) => `
+          <button 
+            type="button" 
+            data-curator-artist="${escapeHtml(artist)}"
+            class="w-full flex items-center justify-between text-zinc-300 hover:text-white hover:bg-zinc-800/60 px-2 py-1.5 rounded-lg transition text-left cursor-pointer group"
+            title="Search records by ${escapeHtml(artist)}"
+          >
+            <span class="truncate pr-2 group-hover:underline">${escapeHtml(artist)}</span>
+            <span class="artist-count-badge font-mono text-[10px] text-zinc-400 bg-zinc-800/80 px-1.5 py-0.5 rounded border border-zinc-700/50 group-hover:border-zinc-500">${count}</span>
+          </button>
+        `).join("");
+      } else {
+        topArtistsEl.innerHTML = `<span class="text-zinc-500 text-[11px]">No artist data</span>`;
+      }
+
+      // Stat buttons direct the user to search
+      document.getElementById("curatorBtnTotal").onclick = () => {
+        closeCuratorModal();
+        setCategory("all");
+        setCuratorSearch(curatorName);
+      };
+
+      document.getElementById("curatorBtnAlbums").onclick = () => {
+        closeCuratorModal();
+        setCategory("album");
+        setCuratorSearch(curatorName);
+      };
+
+      document.getElementById("curatorBtnTracks").onclick = () => {
+        closeCuratorModal();
+        setCategory("track");
+        setCuratorSearch(curatorName);
+      };
+
+      document.getElementById("curatorModal").classList.remove("hidden");
+    }
+
+    function closeCuratorModal() {
+      currentCuratorProfile = null;
+      const modal = document.getElementById("curatorModal");
+      if (modal) modal.classList.add("hidden");
+      syncStateToURL();
     }
 
     // =========================================================================
@@ -530,12 +736,13 @@
         copyText(links);
         showToast(`✓ Copied ${items.length} smartlinks`);
       } else if (type === "csv") {
-        const headers = ["Title", "Artist", "Type", "Curator", "URL", "Date"];
+        const headers = ["Title", "Artist", "Type", "Curator", "Listened", "URL", "Date"];
         const rows = items.map(i => [
           `"${(i.title || "").replace(/"/g, '""')}"`,
           `"${(i.artist || "").replace(/"/g, '""')}"`,
           `"${i.entity_type || ""}"`,
           `"${(i.submitted_by_name || "").replace(/"/g, '""')}"`,
+          `"${i.listened_count || 0}"`,
           `"${i.smartlink_url || i.original_url || ""}"`,
           `"${i.created_at || ""}"`
         ]);
@@ -564,11 +771,22 @@
         let keepFetching = true;
 
         while (keepFetching) {
-          const { data, error } = await client
+          let { data, error } = await client
             .from("submissions")
-            .select("id, canonical_id, title, artist, cover_url, smartlink_url, original_url, entity_type, submitted_by_name, created_at")
+            .select("id, canonical_id, title, artist, cover_url, smartlink_url, original_url, entity_type, submitted_by_name, listened_count, created_at")
             .order("created_at", { ascending: false })
             .range(offset, offset + batchSize - 1);
+
+          // Graceful fallback if the listened_count migration has not been run yet
+          if (error && error.message && error.message.includes("listened_count")) {
+            const fallback = await client
+              .from("submissions")
+              .select("id, canonical_id, title, artist, cover_url, smartlink_url, original_url, entity_type, submitted_by_name, created_at")
+              .order("created_at", { ascending: false })
+              .range(offset, offset + batchSize - 1);
+            data = fallback.data;
+            error = fallback.error;
+          }
 
           if (error) {
             console.error("[Supabase Fetch Error]", error);
@@ -588,7 +806,12 @@
         }
 
         allItems = records;
-        render(true);
+        render();
+
+        if (initialCuratorParam) {
+          openCuratorProfile(initialCuratorParam);
+          initialCuratorParam = null;
+        }
       } catch (err) {
         console.error("[Fatal Data Load]", err);
       }
@@ -602,10 +825,8 @@
           { event: "INSERT", schema: "public", table: "submissions" },
           (payload) => {
             if (!allItems.some(item => item.id === payload.new.id)) {
-              const wasShowingAll = renderedCount >= allItems.length;
               allItems.unshift(normalizeItem(payload.new));
-              if (wasShowingAll) renderedCount = allItems.length;
-              render(false);
+              render();
             }
           }
         )
@@ -615,19 +836,15 @@
           (payload) => {
             const updated = normalizeItem(payload.new);
             allItems = allItems.map(item => item.id === updated.id ? updated : item);
-            render(false);
+            render();
           }
         )
         .on(
           "postgres_changes",
           { event: "DELETE", schema: "public", table: "submissions" },
           (payload) => {
-            const wasShowingAll = renderedCount >= allItems.length;
             allItems = allItems.filter(item => item.id !== payload.old.id);
-            if (wasShowingAll || renderedCount > allItems.length) {
-              renderedCount = allItems.length;
-            }
-            render(false);
+            render();
           }
         )
         .subscribe();
@@ -642,14 +859,23 @@
 
       const filtered = allItems.filter(item => {
         if (currentFilter === "album" && item.entity_type !== "album") return false;
-        if (currentFilter === "song" && item.entity_type !== "song" && item.entity_type !== "track") return false;
-        if (terms.length > 0 && !terms.every(term => item._search.includes(term))) return false;
+        if (currentFilter === "track" && item.entity_type !== "track") return false;
+        if (terms.length > 0) {
+          return terms.every(term => {
+            if (term.startsWith("@") && term.length > 1) {
+              return item._sharer.includes(term.slice(1));
+            }
+            return item._search.includes(term);
+          });
+        }
         return true;
       });
 
       filtered.sort((a, b) => {
         if (currentSort === "newest") return (b._ts - a._ts) || ((b.id || 0) - (a.id || 0));
         if (currentSort === "oldest") return (a._ts - b._ts) || ((a.id || 0) - (b.id || 0));
+        if (currentSort === "listened") return ((b.listened_count || 0) - (a.listened_count || 0)) || (b._ts - a._ts);
+        if (currentSort === "least-listened") return ((a.listened_count || 0) - (b.listened_count || 0)) || (b._ts - a._ts);
         if (currentSort === "artist") return a._artist.localeCompare(b._artist) || (b._ts - a._ts);
         if (currentSort === "title") return a._title.localeCompare(b._title) || (b._ts - a._ts);
         if (currentSort === "sharer") return a._sharer.localeCompare(b._sharer) || (b._ts - a._ts);
@@ -659,57 +885,91 @@
       return filtered;
     }
 
+    function getPlatformMeta(item) {
+      const isSpotify = (item.canonical_id && item.canonical_id.startsWith("spotify")) || 
+                        (item.original_url && item.original_url.includes("spotify.com"));
+      return {
+        isSpotify,
+        name: isSpotify ? "Spotify" : "YouTube"
+      };
+    }
+
     function createCardHTML(item, index) {
       const titleSafe = escapeHtml(item.title || "Untitled");
       const artistSafe = escapeHtml(item.artist || "Unknown Artist");
       const submitterSafe = escapeHtml(item.submitted_by_name || "Community");
-      const urlSafe = sanitizeUrl(item.smartlink_url || item.original_url);
+      const urlDirectSafe = sanitizeUrl(item.original_url || item.smartlink_url);
+      const urlSmartSafe = sanitizeUrl(item.smartlink_url || item.original_url);
       const coverSafe = sanitizeUrl(item.cover_url);
       const isSelected = index === activeIndex;
+      const platform = getPlatformMeta(item);
 
       return `
         <div 
           data-index="${index}" 
-          class="card-entry group bg-zinc-900/60 rounded-lg overflow-hidden border ${isSelected ? "border-zinc-400 ring-2 ring-zinc-500/50" : "border-zinc-800/80 hover:border-zinc-600"} transition-all flex flex-col justify-between relative"
+          class="card-entry group bg-zinc-900/60 rounded-lg overflow-hidden border ${isSelected ? "border-zinc-400 ring-2 ring-zinc-500/50" : "border-zinc-800/80 hover:border-zinc-600"} flex flex-col justify-between relative"
         >
-          <a href="${urlSafe}" target="_blank" rel="noopener noreferrer" class="block flex-1">
-            <div class="aspect-square w-full bg-zinc-900 relative overflow-hidden flex-shrink-0">
-              <img 
-                src="${coverSafe}" 
-                alt="${titleSafe}" 
-                loading="lazy" 
-                decoding="async"
-                class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200 ease-out"
-                onerror="this.onerror=null;this.src='${FALLBACK_ART}';"
+          <!-- Album Cover & Title -> Opens Smartlink -->
+          <div class="flex-1 flex flex-col">
+            <a href="${urlSmartSafe}" target="_blank" rel="noopener noreferrer" class="block" title="Open smartlink">
+              <div class="aspect-square w-full bg-zinc-900 relative overflow-hidden flex-shrink-0">
+                <img 
+                  src="${coverSafe}" 
+                  alt="${titleSafe}" 
+                  loading="lazy" 
+                  decoding="async"
+                  class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200 ease-out"
+                  onerror="this.onerror=null;this.src='${FALLBACK_ART}';"
+                >
+                <!-- Physical Vinyl Hairline & Subtle Glare Sheen -->
+                <div class="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10"></div>
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </div>
+            </a>
+            <div class="p-2.5 min-w-0">
+              <a href="${urlSmartSafe}" target="_blank" rel="noopener noreferrer" class="block" title="${titleSafe}">
+                <h3 class="font-medium text-xs truncate text-zinc-200 group-hover:text-white transition-colors">${titleSafe}</h3>
+              </a>
+              <button 
+                type="button" 
+                data-action="artist" 
+                data-artist="${artistSafe}"
+                class="text-[11px] text-zinc-400 hover:text-zinc-200 truncate mt-0.5 text-left hover:underline block max-w-full cursor-pointer"
+                title="Search records by ${artistSafe}"
               >
+                ${artistSafe}
+              </button>
             </div>
-            <div class="p-2.5">
-              <h3 class="font-medium text-xs truncate text-zinc-200 group-hover:text-white" title="${titleSafe}">${titleSafe}</h3>
-              <p class="text-[11px] text-zinc-400 truncate mt-0.5" title="${artistSafe}">${artistSafe}</p>
-            </div>
-          </a>
-          <div class="px-2.5 pb-2 pt-1 border-t border-zinc-800/60 flex items-center justify-between text-[10px] text-zinc-500">
+          </div>
+
+          <!-- Footer Metadata Bar -->
+          <div class="px-2.5 pb-2 pt-1.5 border-t border-zinc-800/60 flex items-center justify-between text-[10px] text-zinc-500">
             <button 
               type="button" 
               data-action="curator" 
               data-curator="${submitterSafe}"
-              class="truncate pr-1 hover:text-zinc-300 hover:underline transition text-left" 
+              class="font-mono text-[10px] text-zinc-400 hover:text-zinc-200 truncate pr-1 hover:underline transition text-left" 
               title="Filter by @${submitterSafe}"
             >
               @${submitterSafe}
             </button>
-            <div class="flex items-center gap-1.5 flex-shrink-0">
-              <button 
-                type="button" 
-                aria-label="Copy smartlink" 
-                data-action="copy" 
-                data-url="${urlSafe}"
-                class="hover:text-zinc-200 transition p-1 -m-1"
-                title="Copy Link"
+            
+            <div class="flex items-center gap-2 flex-shrink-0">
+              ${item.listened_count > 0 ? `
+                <span class="inline-flex items-center gap-1 font-mono text-[10px] text-rose-400/90" title="${item.listened_count} listened">
+                  <span class="text-[11px] leading-none">❤️</span><span>${item.listened_count}</span>
+                </span>
+              ` : ""}
+              <!-- Direct Source Link -->
+              <a 
+                href="${urlDirectSafe}" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                class="text-zinc-500 hover:text-zinc-200 transition py-0.5 px-1 -mr-1 leading-none text-xs" 
+                title="Open in ${platform.name}"
               >
-                ⎘
-              </button>
-              <a href="${urlSafe}" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-zinc-300" title="Open stream link">↗</a>
+                ↗
+              </a>
             </div>
           </div>
         </div>
@@ -720,53 +980,68 @@
       const titleSafe = escapeHtml(item.title || "Untitled");
       const artistSafe = escapeHtml(item.artist || "Unknown Artist");
       const submitterSafe = escapeHtml(item.submitted_by_name || "Community");
-      const urlSafe = sanitizeUrl(item.smartlink_url || item.original_url);
+      const urlDirectSafe = sanitizeUrl(item.original_url || item.smartlink_url);
+      const urlSmartSafe = sanitizeUrl(item.smartlink_url || item.original_url);
       const coverSafe = sanitizeUrl(item.cover_url);
       const isSelected = index === activeIndex;
+      const platform = getPlatformMeta(item);
 
       return `
         <div 
           data-index="${index}" 
-          class="group flex items-center justify-between gap-3 p-2 bg-zinc-900/60 rounded-lg border ${isSelected ? "border-zinc-400 ring-1 ring-zinc-500/50" : "border-zinc-800/80 hover:border-zinc-700"} transition-all text-xs"
+          class="card-entry group flex items-center justify-between gap-3 p-2 bg-zinc-900/60 rounded-lg border ${isSelected ? "border-zinc-400 ring-1 ring-zinc-500/50" : "border-zinc-800/80 hover:border-zinc-700"} text-xs"
         >
           <div class="flex items-center gap-3 min-w-0 flex-1">
-            <img 
-              src="${coverSafe}" 
-              alt="${titleSafe}" 
-              loading="lazy" 
-              decoding="async"
-              class="h-9 w-9 rounded object-cover flex-shrink-0 bg-zinc-800"
-              onerror="this.onerror=null;this.src='${FALLBACK_ART}';"
-            >
+            <a href="${urlSmartSafe}" target="_blank" rel="noopener noreferrer" class="relative block flex-shrink-0" title="Open smartlink">
+              <img 
+                src="${coverSafe}" 
+                alt="${titleSafe}" 
+                loading="lazy" 
+                decoding="async"
+                class="h-9 w-9 rounded object-cover bg-zinc-800"
+                onerror="this.onerror=null;this.src='${FALLBACK_ART}';"
+              >
+              <div class="pointer-events-none absolute inset-0 rounded ring-1 ring-inset ring-white/10"></div>
+            </a>
             <div class="min-w-0 flex-1">
-              <a href="${urlSafe}" target="_blank" rel="noopener noreferrer" class="font-medium text-zinc-200 hover:text-white truncate block">
+              <a href="${urlDirectSafe}" target="_blank" rel="noopener noreferrer" class="font-medium text-zinc-200 hover:text-white truncate block" title="${titleSafe}">
                 ${titleSafe}
               </a>
-              <p class="text-[11px] text-zinc-400 truncate">${artistSafe}</p>
+              <button 
+                type="button" 
+                data-action="artist" 
+                data-artist="${artistSafe}"
+                class="text-[11px] text-zinc-400 hover:text-zinc-200 truncate mt-0.5 text-left hover:underline block max-w-full cursor-pointer"
+                title="Search records by ${artistSafe}"
+              >
+                ${artistSafe}
+              </button>
             </div>
           </div>
-          <div class="flex items-center gap-4 flex-shrink-0 text-[11px] text-zinc-500">
+          <div class="flex items-center gap-3 flex-shrink-0 text-[11px] text-zinc-500">
+            ${item.listened_count > 0 ? `
+              <span class="inline-flex items-center gap-1 font-mono text-[10px] text-rose-400/90" title="${item.listened_count} listened">
+                <span class="text-[11px] leading-none">❤️</span><span>${item.listened_count}</span>
+              </span>
+            ` : ""}
             <button 
               type="button" 
               data-action="curator" 
               data-curator="${submitterSafe}"
-              class="hover:text-zinc-300 hover:underline transition hidden sm:inline"
+              class="font-mono text-[10px] text-zinc-400 hover:text-zinc-200 hover:underline transition hidden sm:inline"
               title="Filter by @${submitterSafe}"
             >
               @${submitterSafe}
             </button>
-            <div class="flex items-center gap-2">
-              <button 
-                type="button" 
-                data-action="copy" 
-                data-url="${urlSafe}" 
-                class="hover:text-zinc-200 transition p-1" 
-                title="Copy Smartlink"
-              >
-                ⎘
-              </button>
-              <a href="${urlSafe}" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-200 transition p-1" title="Open stream link">↗</a>
-            </div>
+            <a 
+              href="${urlDirectSafe}" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="text-zinc-500 hover:text-zinc-200 transition p-1 leading-none text-xs" 
+              title="Open in ${platform.name}"
+            >
+              ↗
+            </a>
           </div>
         </div>
       `;
@@ -776,18 +1051,18 @@
       const titleSafe = escapeHtml(item.title || "Untitled");
       const artistSafe = escapeHtml(item.artist || "Unknown Artist");
       const submitterSafe = escapeHtml(item.submitted_by_name || "Community");
-      const urlSafe = sanitizeUrl(item.smartlink_url || item.original_url);
+      const urlSmartSafe = sanitizeUrl(item.smartlink_url || item.original_url);
       const coverSafe = sanitizeUrl(item.cover_url);
       const isSelected = index === activeIndex;
 
       return `
         <a 
           data-index="${index}"
-          href="${urlSafe}" 
+          href="${urlSmartSafe}" 
           target="_blank" 
           rel="noopener noreferrer" 
           title="${titleSafe} — ${artistSafe} (@${submitterSafe})"
-          class="card-entry group aspect-square bg-zinc-900 rounded-lg overflow-hidden border ${isSelected ? "border-zinc-400 ring-2 ring-zinc-500/50" : "border-zinc-800/80 hover:border-zinc-500"} transition-all block relative"
+          class="card-entry-cover group aspect-square bg-zinc-900 rounded-lg overflow-hidden border ${isSelected ? "border-zinc-400 ring-2 ring-zinc-500/50" : "border-zinc-800/80 hover:border-zinc-500"} block relative"
         >
           <img 
             src="${coverSafe}" 
@@ -797,10 +1072,24 @@
             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 ease-out"
             onerror="this.onerror=null;this.src='${FALLBACK_ART}';"
           >
+          <div class="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10"></div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         </a>
       `;
     }
 
+    function getGridColumnCount() {
+      if (currentView === "list") return 1;
+      const cards = document.querySelectorAll("#grid > [data-index]");
+      if (cards.length < 2) return 1;
+      const firstTop = cards[0].offsetTop;
+      for (let i = 1; i < cards.length; i++) {
+        if (cards[i].offsetTop > firstTop) return i;
+      }
+      return cards.length;
+    }
+
+    // High-performance selection updater that toggles classes without rebuilding DOM tree
     function updateActiveSelection(newIdx, scroll = true) {
       if (activeIndex >= 0) {
         const oldEl = document.querySelector(`[data-index="${activeIndex}"]`);
@@ -820,10 +1109,10 @@
       }
     }
 
-    function render(resetCount = false) {
+    function render() {
       const container = document.getElementById("grid");
       const clearBtn = document.getElementById("clearSearch");
-      const loadMoreContainer = document.getElementById("loadMoreContainer");
+      const resultsCount = document.getElementById("resultsCount");
       const query = document.getElementById("searchInput").value.trim();
 
       clearBtn.classList.toggle("hidden", query.length === 0);
@@ -838,32 +1127,35 @@
 
       const items = getProcessedItems();
 
-      if (resetCount) {
-        renderedCount = items.length;
+      if (resultsCount) {
+        resultsCount.textContent = `${items.length} found`;
       }
 
       if (items.length === 0) {
         container.innerHTML = `
           <div class="col-span-full py-20 text-center text-zinc-500 text-xs">
-            No submissions found matching criteria.
+            <p>No submissions found matching criteria.</p>
+            <button id="resetSearchBtn" class="mt-3 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-300 hover:text-white transition cursor-pointer font-mono text-[11px]">
+              Clear filters
+            </button>
           </div>
         `;
-        loadMoreContainer.classList.add("hidden");
+        const resetBtn = document.getElementById("resetSearchBtn");
+        if (resetBtn) {
+          resetBtn.addEventListener("click", () => {
+            document.getElementById("searchInput").value = "";
+            syncStateToURL();
+            render();
+          });
+        }
         return;
       }
 
-      const visibleItems = items.slice(0, renderedCount);
       let renderer = createCardHTML;
       if (currentView === "covers") renderer = createCoverOnlyHTML;
       else if (currentView === "list") renderer = createListRowHTML;
 
-      container.innerHTML = visibleItems.map((item, idx) => renderer(item, idx)).join("");
-
-      if (renderedCount < items.length) {
-        loadMoreContainer.classList.remove("hidden");
-      } else {
-        loadMoreContainer.classList.add("hidden");
-      }
+      container.innerHTML = items.map((item, idx) => renderer(item, idx)).join("");
     }
 
     // =========================================================================
@@ -874,35 +1166,32 @@
       if (curatorBtn) {
         e.preventDefault();
         e.stopPropagation();
-        setCuratorSearch(curatorBtn.dataset.curator);
+        openCuratorProfile(curatorBtn.dataset.curator);
         return;
       }
-
-      const copyBtn = e.target.closest('[data-action="copy"]');
-      if (copyBtn) {
+      const artistBtn = e.target.closest('[data-action="artist"]');
+      if (artistBtn) {
         e.preventDefault();
         e.stopPropagation();
-        copyText(copyBtn.dataset.url);
-        showToast("✓ Smartlink copied!");
+        filterByArtist(artistBtn.dataset.artist);
         return;
       }
     });
 
     document.querySelectorAll(".filter-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".filter-btn").forEach(b => {
-          b.classList.remove("bg-zinc-800", "text-white", "font-medium");
-          b.classList.add("text-zinc-400");
-        });
-        btn.classList.add("bg-zinc-800", "text-white", "font-medium");
-        btn.classList.remove("text-zinc-400");
-        currentFilter = btn.dataset.type;
+        if (currentFilter === btn.dataset.type) {
+          setCategory("all");
+        } else {
+          setCategory(btn.dataset.type);
+        }
         activeIndex = -1;
         syncStateToURL();
-        render(true);
+        render();
       });
     });
 
+    // Sort Dropdown Handlers
     const sortBtn = document.getElementById("sortMenuBtn");
     const sortDropdown = document.getElementById("sortDropdown");
 
@@ -923,7 +1212,7 @@
         sortDropdown.classList.add("hidden");
         activeIndex = -1;
         syncStateToURL();
-        render(true);
+        render();
       });
     });
 
@@ -931,23 +1220,24 @@
       currentView = "grid";
       updateViewButtons();
       syncStateToURL();
-      render(false);
+      render();
     });
 
     document.getElementById("viewCoversBtn").addEventListener("click", () => {
       currentView = "covers";
       updateViewButtons();
       syncStateToURL();
-      render(false);
+      render();
     });
 
     document.getElementById("viewListBtn").addEventListener("click", () => {
       currentView = "list";
       updateViewButtons();
       syncStateToURL();
-      render(false);
+      render();
     });
 
+    // Settings Dropdown Handlers
     const settingsBtn = document.getElementById("settingsMenuBtn");
     const settingsDropdown = document.getElementById("settingsDropdown");
 
@@ -970,6 +1260,7 @@
       sortDropdown.classList.add("hidden");
     });
 
+    // Keyboard Shortcuts Modal Handlers
     const shortcutsModal = document.getElementById("shortcutsModal");
     const shortcutsBtn = document.getElementById("shortcutsBtn");
     const closeShortcutsBtn = document.getElementById("closeShortcutsBtn");
@@ -989,11 +1280,38 @@
       }
     });
 
+    // Curator Profile Modal Handlers
+    const curatorModal = document.getElementById("curatorModal");
+    const closeCuratorBtn = document.getElementById("closeCuratorBtn");
+
+    if (closeCuratorBtn) {
+      closeCuratorBtn.addEventListener("click", closeCuratorModal);
+    }
+    if (curatorModal) {
+      curatorModal.addEventListener("click", (e) => {
+        if (e.target === curatorModal) closeCuratorModal();
+      });
+    }
+
+    // Click delegation for top artists inside curator profile
+    const topArtistsList = document.getElementById("curatorTopArtists");
+    if (topArtistsList) {
+      topArtistsList.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-curator-artist]");
+        if (btn) {
+          const artist = btn.dataset.curatorArtist;
+          closeCuratorModal();
+          filterByArtist(artist);
+        }
+      });
+    }
+
+    // Video Easter Egg Modal Handlers
     const videoModal = document.getElementById("videoModal");
     const videoIframe = document.getElementById("videoIframe");
     const fileNotice = document.getElementById("fileProtocolNotice");
     const closeVideoBtn = document.getElementById("closeVideoBtn");
-    const logoEasterEggBtn = document.getElementById("logoEasterEggBtn");
+    const logoBtn = document.getElementById("logoBtn");
 
     function openVideoModal() {
       if (window.location.protocol === "file:") {
@@ -1001,7 +1319,7 @@
         videoIframe.src = "";
       } else {
         fileNotice.classList.add("hidden");
-        videoIframe.src = "https://www.youtube.com/embed/V4IuLJFEzxY?autoplay=1&rel=0&playsinline=1";
+        videoIframe.src = "https://www.youtube.com/embed/d6uN9xYUMxE?autoplay=1&rel=0&playsinline=1";
       }
       videoModal.classList.remove("hidden");
     }
@@ -1011,11 +1329,27 @@
       videoIframe.src = "";
     }
 
-    if (logoEasterEggBtn) {
-      logoEasterEggBtn.addEventListener("click", (e) => {
+    function resetToHome() {
+      document.getElementById("searchInput").value = "";
+      setCategory("album");
+      currentSort = "newest";
+      updateSortUI();
+      closeCuratorModal();
+      activeIndex = -1;
+      syncStateToURL();
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    if (logoBtn) {
+      logoBtn.addEventListener("click", (e) => {
         if (e.metaKey || e.ctrlKey || e.button === 1) return;
         e.preventDefault();
-        openVideoModal();
+        if (e.shiftKey) {
+          openVideoModal();
+        } else {
+          resetToHome();
+        }
       });
     }
 
@@ -1064,7 +1398,7 @@
       searchDebounceTimer = setTimeout(() => {
         activeIndex = -1;
         syncStateToURL();
-        render(true);
+        render();
       }, 120);
     });
 
@@ -1072,25 +1406,10 @@
       searchInput.value = "";
       activeIndex = -1;
       syncStateToURL();
-      render(true);
+      render();
     });
 
-    const loadMoreBtn = document.getElementById("loadMoreBtn");
-    loadMoreBtn.addEventListener("click", () => {
-      renderedCount += PAGE_CHUNK;
-      render(false);
-    });
-
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && !document.getElementById("loadMoreContainer").classList.contains("hidden")) {
-          renderedCount += PAGE_CHUNK;
-          render(false);
-        }
-      }, { rootMargin: "300px" });
-      observer.observe(loadMoreBtn);
-    }
-
+    // Keyboard navigation: "/", "Esc", arrow keys (←, →, ↑, ↓), and "Enter"
     window.addEventListener("keydown", (e) => {
       const isInputActive = document.activeElement === searchInput;
 
@@ -1103,6 +1422,10 @@
       if (e.key === "Escape") {
         if (!videoModal.classList.contains("hidden")) {
           closeVideoModal();
+          return;
+        }
+        if (!curatorModal.classList.contains("hidden")) {
+          closeCuratorModal();
           return;
         }
         if (!shortcutsModal.classList.contains("hidden")) {
@@ -1122,7 +1445,7 @@
         updateActiveSelection(-1, false);
         syncStateToURL();
         if (hadQuery) {
-          render(true);
+          render();
         }
         return;
       }
@@ -1136,28 +1459,72 @@
       if (isInputActive) return;
 
       const items = getProcessedItems();
-      const maxIdx = Math.min(items.length, renderedCount) - 1;
+      const maxIdx = items.length - 1;
 
-      if (e.key === "j" || e.key === "ArrowDown") {
+      if (e.key === "ArrowRight") {
         e.preventDefault();
         if (maxIdx >= 0) {
-          const nextIdx = activeIndex < maxIdx ? activeIndex + 1 : 0;
+          const nextIdx = (activeIndex === -1) ? 0 : (activeIndex < maxIdx ? activeIndex + 1 : 0);
           updateActiveSelection(nextIdx);
         }
-      } else if (e.key === "k" || e.key === "ArrowUp") {
+      } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         if (maxIdx >= 0) {
-          const prevIdx = activeIndex > 0 ? activeIndex - 1 : maxIdx;
+          const prevIdx = (activeIndex === -1) ? 0 : (activeIndex > 0 ? activeIndex - 1 : maxIdx);
           updateActiveSelection(prevIdx);
+        }
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (maxIdx >= 0) {
+          if (activeIndex === -1) {
+            updateActiveSelection(0);
+          } else {
+            const cols = getGridColumnCount();
+            if (cols <= 1) {
+              const nextIdx = activeIndex < maxIdx ? activeIndex + 1 : 0;
+              updateActiveSelection(nextIdx);
+            } else {
+              let nextIdx = activeIndex + cols;
+              if (nextIdx > maxIdx) {
+                nextIdx = activeIndex % cols;
+              }
+              updateActiveSelection(nextIdx);
+            }
+          }
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (maxIdx >= 0) {
+          if (activeIndex === -1) {
+            updateActiveSelection(0);
+          } else {
+            const cols = getGridColumnCount();
+            if (cols <= 1) {
+              const prevIdx = activeIndex > 0 ? activeIndex - 1 : maxIdx;
+              updateActiveSelection(prevIdx);
+            } else {
+              let prevIdx = activeIndex - cols;
+              if (prevIdx < 0) {
+                const col = activeIndex % cols;
+                let candidate = col;
+                while (candidate + cols <= maxIdx) {
+                  candidate += cols;
+                }
+                prevIdx = candidate;
+              }
+              updateActiveSelection(prevIdx);
+            }
+          }
         }
       } else if (e.key === "Enter" && activeIndex >= 0 && activeIndex <= maxIdx) {
         e.preventDefault();
         const selected = items[activeIndex];
-        const targetUrl = sanitizeUrl(selected.smartlink_url || selected.original_url);
+        const targetUrl = sanitizeUrl(selected.original_url || selected.smartlink_url);
         if (targetUrl && targetUrl !== "#") window.open(targetUrl, "_blank", "noopener,noreferrer");
       }
     });
 
+    // Initialize application & restore URL parameters
     initTheme();
     updateSortUI();
     updateViewButtons();
